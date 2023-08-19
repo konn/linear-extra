@@ -16,7 +16,9 @@ module Data.Array.Mutable.Linear.Primitive (
 
   -- * Performing Computations with Arrays
   alloc,
+  unsafeAlloc,
   allocBeside,
+  unsafeAllocBeside,
   fromList,
 
   -- * Modifications
@@ -64,6 +66,8 @@ instance Dupable (PrimArray a) where
 
 {- | Allocate a constant array given a size and an initial value
 The size must be non-negative, otherwise this errors.
+
+/See also/: 'unsafeAlloc'
 -}
 alloc :: (HasCallStack, Prim a) => Int -> a -> (PrimArray a %1 -> Ur b) %1 -> Ur b
 {-# ANN alloc "HLint: ignore Avoid lambda" #-}
@@ -71,8 +75,17 @@ alloc s x f
   | s < 0 = error "PrimArray.alloc: negative size" f
   | otherwise = Unlifted.alloc s x \arr# -> f (PrimArray arr#)
 
+-- | Same as 'alloc', but without initial value.
+unsafeAlloc :: (HasCallStack, Prim a) => Int -> (PrimArray a %1 -> Ur b) %1 -> Ur b
+{-# ANN unsafeAlloc "HLint: ignore Avoid lambda" #-}
+unsafeAlloc s f
+  | s < 0 = error "PrimArray.alloc: negative size" f
+  | otherwise = Unlifted.unsafeAlloc s \arr# -> f (PrimArray arr#)
+
 {- | Allocate a constant array given a size and an initial value,
 using another array as a uniqueness proof.
+
+/See also/: 'unsafeAllocBeside'
 -}
 allocBeside :: Prim a => Int -> a -> PrimArray b %1 -> (PrimArray a, PrimArray b)
 allocBeside s x (PrimArray orig)
@@ -86,15 +99,26 @@ allocBeside s x (PrimArray orig)
     wrap :: (# PrimArray# a, PrimArray# b #) %1 -> (PrimArray a, PrimArray b)
     wrap (# orig, new #) = (PrimArray orig, PrimArray new)
 
+unsafeAllocBeside :: Prim a => Int -> PrimArray b %1 -> (PrimArray a, PrimArray b)
+unsafeAllocBeside s (PrimArray orig)
+  | s < 0 =
+      Unlifted.lseq
+        orig
+        (error ("PrimArray.allocBeside: negative size: " ++ show s))
+  | otherwise =
+      wrap (Unlifted.unsafeAllocBeside s orig)
+  where
+    wrap :: (# PrimArray# a, PrimArray# b #) %1 -> (PrimArray a, PrimArray b)
+    wrap (# orig, new #) = (PrimArray orig, PrimArray new)
+
 fromList ::
   (HasCallStack, Prim a) =>
   [a] ->
   (PrimArray a %1 -> Ur b) %1 ->
   Ur b
 fromList list (f :: PrimArray a %1 -> Ur b) =
-  alloc
+  unsafeAlloc
     (P.length list)
-    (head list)
     (f . insert)
   where
     insert :: PrimArray a %1 -> PrimArray a
