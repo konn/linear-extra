@@ -162,7 +162,7 @@ toList = unPrimArray# P.$ \arr ->
     []
     arr
   where
-    go !i !len !acc !arr
+    go !i !len acc arr
       | i P.== len = acc
       | GHC.I# i# <- i =
           case GHC.runRW# (readByteArray# arr i#) of
