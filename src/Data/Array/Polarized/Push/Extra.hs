@@ -10,7 +10,7 @@ module Data.Array.Polarized.Push.Extra (
   module Data.Array.Polarized.Push,
 ) where
 
-import qualified Data.Array.Destination.Generic as GD
+import qualified Data.Array.Destination.Vector.Generic as GD
 import Data.Array.Polarized.Push hiding (alloc)
 import qualified Data.Array.Polarized.Push as Push
 import qualified Data.Vector.Generic as G

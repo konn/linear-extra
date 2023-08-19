@@ -1,9 +1,7 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -116,12 +114,15 @@ unsafeResize n = Unsafe.toLinear \(UArray arr) ->
       case GHC.runRW# P.$ GHC.unIO P.$ MU.unsafeGrow arr (n - MU.length arr) of
         (# _, arr #) -> UArray arr
 
-instance (U.Unbox a, Consumable a) => Consumable (UArray a) where
+{- | Note: 'Unbox'ed vectors should be regarded as an n-tuple of ByteArray;
+So we can just drop it.
+-}
+instance (U.Unbox a) => Consumable (UArray a) where
   consume = Unsafe.toLinear \(UArray mu) ->
-    consume (U.toList (unsafeDupablePerformIO (U.unsafeFreeze mu)))
+    unsafeDupablePerformIO (U.unsafeFreeze mu) `seq` ()
   {-# NOINLINE consume #-}
 
-instance (U.Unbox a, Consumable a) => Dupable (UArray a) where
+instance (U.Unbox a) => Dupable (UArray a) where
   dup2 = Unsafe.toLinear \(UArray mu) ->
     (UArray mu, UArray (unsafeDupablePerformIO (MU.clone mu)))
   {-# NOINLINE dup2 #-}

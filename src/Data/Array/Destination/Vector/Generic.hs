@@ -4,7 +4,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
-module Data.Array.Destination.Generic (
+module Data.Array.Destination.Vector.Generic (
   DArray (),
 
   -- * Create and use a 'DArray'
