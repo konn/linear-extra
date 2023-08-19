@@ -27,6 +27,8 @@ library
   exposed-modules:
       Data.Array.Destination.Generic
       Data.Array.Destination.Unboxed
+      Data.Array.Mutable.Linear.Primitive
+      Data.Array.Mutable.Unlifted.Linear.Primitive
       Data.Array.Polarized.Pull.Extra
       Data.Array.Polarized.Push.Extra
       Data.Unrestricted.Linear.Orphans.Vector
@@ -38,6 +40,7 @@ library
   build-depends:
       base >=4.7 && <5
     , linear-base >=0.2
+    , primitive
     , vector
   default-language: Haskell2010
 
@@ -52,6 +55,7 @@ executable linear-array-extra-exe
       base >=4.7 && <5
     , linear-array-extra
     , linear-base >=0.2
+    , primitive
     , vector
   default-language: Haskell2010
 
@@ -67,5 +71,6 @@ test-suite linear-array-extra-test
       base >=4.7 && <5
     , linear-array-extra
     , linear-base >=0.2
+    , primitive
     , vector
   default-language: Haskell2010
