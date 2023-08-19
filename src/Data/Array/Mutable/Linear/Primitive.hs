@@ -1,10 +1,12 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE MagicHash #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE UnboxedTuples #-}
@@ -22,9 +24,11 @@ module Data.Array.Mutable.Linear.Primitive (
   fromList,
 
   -- * Modifications
+  fill,
   set,
   unsafeSet,
   resize,
+  unsafeResize,
   map,
 
   -- * Accessors
@@ -32,6 +36,7 @@ module Data.Array.Mutable.Linear.Primitive (
   unsafeGet,
   size,
   slice,
+  unsafeSlice,
   toList,
   freeze,
 
@@ -42,6 +47,7 @@ module Data.Array.Mutable.Linear.Primitive (
   unsafeWrite,
 ) where
 
+import qualified Data.Array.Mutable.Linear.Class as C
 import Data.Array.Mutable.Unlifted.Linear.Primitive (PrimArray#)
 import qualified Data.Array.Mutable.Unlifted.Linear.Primitive as Unlifted
 import Data.Primitive (Prim)
@@ -159,6 +165,9 @@ unsafeSet :: Prim a => Int -> a -> PrimArray a %1 -> PrimArray a
 unsafeSet ix val (PrimArray arr) =
   PrimArray (Unlifted.set ix val arr)
 
+fill :: Prim a => a -> PrimArray a %1 -> PrimArray a
+fill a (PrimArray arr) = PrimArray (Unlifted.fill a arr)
+
 -- | Same as 'unsafeSet', but takes the 'PrimArray' as the first parameter.
 unsafeWrite :: (Prim a) => PrimArray a %1 -> Int -> a -> PrimArray a
 unsafeWrite arr i a = unsafeSet i a arr
@@ -206,7 +215,13 @@ resize newSize seed (PrimArray arr :: PrimArray a)
         arr
         (error "Trying to resize to a negative size.")
   | otherwise =
-      doCopy (Unlifted.allocBeside newSize seed arr)
+      unsafeResize newSize (Just seed) (PrimArray arr)
+
+unsafeResize :: (Prim a) => Int -> Maybe a -> PrimArray a %1 -> PrimArray a
+unsafeResize newSize seed (PrimArray arr :: PrimArray a) =
+  case seed of
+    Nothing -> doCopy (Unlifted.unsafeAllocBeside newSize arr)
+    Just seed -> doCopy (Unlifted.allocBeside newSize seed arr)
   where
     doCopy :: (# PrimArray# a, PrimArray# a #) %1 -> PrimArray a
     doCopy (# new, old #) = wrap (Unlifted.copyInto 0 old new)
@@ -245,13 +260,23 @@ slice from targetSize (arr :: PrimArray a) =
           Unlifted.lseq
             old
             (error "Slice index out of bounds.")
-      | otherwise ->
-          doCopy
-            ( Unlifted.allocBeside
-                targetSize
-                (error "invariant violation: uninitialized array index")
-                old
-            )
+      | otherwise -> unsafeSlice from targetSize (PrimArray old)
+
+unsafeSlice ::
+  (Prim a) =>
+  -- | Start offset
+  Int ->
+  -- | Target size
+  Int ->
+  PrimArray a %1 ->
+  (PrimArray a, PrimArray a)
+unsafeSlice from targetSize (PrimArray old :: PrimArray a) =
+  doCopy
+    ( Unlifted.allocBeside
+        targetSize
+        (error "invariant violation: uninitialized array index")
+        old
+    )
   where
     doCopy :: (# PrimArray# a, PrimArray# a #) %1 -> (PrimArray a, PrimArray a)
     doCopy (# new, old #) = wrap (Unlifted.copyInto from old new)
@@ -270,3 +295,14 @@ freeze (PrimArray arr) =
 
 map :: (Prim a, Prim b) => (a -> b) -> PrimArray a %1 -> PrimArray b
 map f (PrimArray arr) = PrimArray (Unlifted.map f arr)
+
+instance Prim a => C.Array PrimArray a where
+  size = size
+  fromList = fromList
+  unsafeAlloc = unsafeAlloc
+  unsafeAllocBeside = unsafeAllocBeside
+  fill = fill
+  unsafeSet = unsafeSet
+  unsafeGet = unsafeGet
+  unsafeSlice = unsafeSlice
+  unsafeResize i = unsafeResize i Nothing

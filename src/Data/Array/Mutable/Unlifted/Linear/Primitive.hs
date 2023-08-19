@@ -24,6 +24,7 @@ module Data.Array.Mutable.Unlifted.Linear.Primitive (
   size,
   get,
   set,
+  fill,
   copyInto,
   map,
   toList,
@@ -72,6 +73,13 @@ unsafeAlloc (GHC.I# n#) f =
           (# _, arr #) -> PrimArray# arr
    in f new
 {-# NOINLINE unsafeAlloc #-} -- prevents runRW# from floating outwards
+
+fill :: Prim a => a -> PrimArray# a %1 -> PrimArray# a
+fill (a :: a) = Unsafe.toLinear \(PrimArray# arr :: PrimArray# a) ->
+  let !(GHC.I# i) = sizeOfPrimArray# (GHC.proxy# @a) arr
+   in case GHC.runRW# (setByteArray# arr 0# i a) of
+        !_ -> PrimArray# arr
+{-# NOINLINE fill #-}
 
 -- | _See also_: 'unsafeAllocBeside'
 allocBeside :: forall a b. Prim a => Int -> a -> PrimArray# b %1 -> (# PrimArray# a, PrimArray# b #)

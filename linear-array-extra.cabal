@@ -27,11 +27,13 @@ library
   exposed-modules:
       Data.Array.Destination.Generic
       Data.Array.Destination.Unboxed
+      Data.Array.Mutable.Linear.Class
       Data.Array.Mutable.Linear.Primitive
       Data.Array.Mutable.Unlifted.Linear.Primitive
       Data.Array.Polarized.Pull.Extra
       Data.Array.Polarized.Push.Extra
       Data.Unrestricted.Linear.Orphans.Vector
+      Data.Vector.Mutable.Linear.Generic
   other-modules:
       Paths_linear_array_extra
   hs-source-dirs:
