@@ -48,7 +48,7 @@ import Data.Primitive (Prim)
 import qualified Data.Primitive as Prim
 import qualified Data.Vector.Primitive as PV
 import GHC.Stack (HasCallStack)
-import Prelude.Linear hiding (read)
+import Prelude.Linear hiding (map, read)
 import qualified Prelude as P
 
 data PrimArray a = PrimArray (PrimArray# a)
@@ -267,3 +267,6 @@ freeze (PrimArray arr) =
   Unlifted.freeze
     (\pa@(Prim.PrimArray a) -> PV.Vector 0 (Prim.sizeofPrimArray pa) (Prim.ByteArray a))
     arr
+
+map :: (Prim a, Prim b) => (a -> b) -> PrimArray a %1 -> PrimArray b
+map f (PrimArray arr) = PrimArray (Unlifted.map f arr)
