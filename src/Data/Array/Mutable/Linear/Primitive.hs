@@ -94,7 +94,7 @@ fromList ::
 fromList list (f :: PrimArray a %1 -> Ur b) =
   alloc
     (P.length list)
-    (error "invariant violation: unintialized array position")
+    (head list)
     (f . insert)
   where
     insert :: PrimArray a %1 -> PrimArray a

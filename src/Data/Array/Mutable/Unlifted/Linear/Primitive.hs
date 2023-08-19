@@ -52,8 +52,9 @@ infix 0 `lseq`
 
 alloc :: forall a b. Prim a => Int -> a -> (PrimArray# a %1 -> Ur b) %1 -> Ur b
 alloc (GHC.I# n#) a f =
-  let new = GHC.runRW# P.$ \s ->
-        case GHC.newByteArray# (n# GHC.*# sizeOf# (undefined :: a)) s of
+  let byteSize# = n# GHC.*# sizeOf# (undefined :: a)
+      new = GHC.runRW# P.$ \s ->
+        case GHC.newByteArray# byteSize# s of
           (# s, arr #) -> case setByteArray# arr 0# n# a s of
             !_ -> PrimArray# arr
    in f new
