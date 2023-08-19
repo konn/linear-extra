@@ -20,17 +20,17 @@ instance (Consumable a, U.Unbox a) => Consumable (U.Vector a) where
   {-# INLINE consume #-}
 
 instance (Dupable a, U.Unbox a) => Dupable (U.Vector a) where
-  dup2 = Unsafe.toLinear (U.unzip P.. U.map (Unsafe.toLinear dup2))
+  dup2 = Unsafe.toLinear (U.unzip P.. U.map (forget dup2))
   {-# INLINE dup2 #-}
 
 instance (Dupable a) => Dupable (V.Vector a) where
-  dup2 = Unsafe.toLinear (V.unzip P.. V.map (Unsafe.toLinear dup2))
+  dup2 = Unsafe.toLinear (V.unzip P.. V.map (forget dup2))
   {-# INLINE dup2 #-}
 
 instance (Movable a, U.Unbox a) => Movable (U.Vector a) where
-  move = Unsafe.toLinear (U.mapM (Unsafe.toLinear move))
+  move = Unsafe.toLinear (U.mapM (forget move))
   {-# INLINE move #-}
 
 instance (Movable a) => Movable (V.Vector a) where
-  move = Unsafe.toLinear (V.mapM (Unsafe.toLinear move))
+  move = Unsafe.toLinear (V.mapM (forget move))
   {-# INLINE move #-}
