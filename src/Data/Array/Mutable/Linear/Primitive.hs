@@ -82,18 +82,16 @@ alloc s x f
   | otherwise = Unlifted.alloc s x \arr# -> f (PrimArray arr#)
 
 -- | Same as 'alloc', but without initial value.
-unsafeAlloc :: (HasCallStack, Prim a) => Int -> (PrimArray a %1 -> Ur b) %1 -> Ur b
+unsafeAlloc :: (Prim a) => Int -> (PrimArray a %1 -> Ur b) %1 -> Ur b
 {-# ANN unsafeAlloc "HLint: ignore Avoid lambda" #-}
-unsafeAlloc s f
-  | s < 0 = error "PrimArray.alloc: negative size" f
-  | otherwise = Unlifted.unsafeAlloc s \arr# -> f (PrimArray arr#)
+unsafeAlloc s f = Unlifted.unsafeAlloc s \arr# -> f (PrimArray arr#)
 
 {- | Allocate a constant array given a size and an initial value,
 using another array as a uniqueness proof.
 
 /See also/: 'unsafeAllocBeside'
 -}
-allocBeside :: Prim a => Int -> a -> PrimArray b %1 -> (PrimArray a, PrimArray b)
+allocBeside :: (HasCallStack, Prim a) => Int -> a -> PrimArray b %1 -> (PrimArray a, PrimArray b)
 allocBeside s x (PrimArray orig)
   | s < 0 =
       Unlifted.lseq
@@ -106,19 +104,13 @@ allocBeside s x (PrimArray orig)
     wrap (# orig, new #) = (PrimArray orig, PrimArray new)
 
 unsafeAllocBeside :: Prim a => Int -> PrimArray b %1 -> (PrimArray a, PrimArray b)
-unsafeAllocBeside s (PrimArray orig)
-  | s < 0 =
-      Unlifted.lseq
-        orig
-        (error ("PrimArray.allocBeside: negative size: " ++ show s))
-  | otherwise =
-      wrap (Unlifted.unsafeAllocBeside s orig)
+unsafeAllocBeside s (PrimArray orig) = wrap (Unlifted.unsafeAllocBeside s orig)
   where
     wrap :: (# PrimArray# a, PrimArray# b #) %1 -> (PrimArray a, PrimArray b)
     wrap (# orig, new #) = (PrimArray orig, PrimArray new)
 
 fromList ::
-  (HasCallStack, Prim a) =>
+  (Prim a) =>
   [a] ->
   (PrimArray a %1 -> Ur b) %1 ->
   Ur b

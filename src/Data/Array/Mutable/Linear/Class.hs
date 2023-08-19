@@ -12,7 +12,7 @@
 {-# LANGUAGE UnboxedTuples #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
-module Data.Array.Mutable.Linear.Class where
+module Data.Array.Mutable.Linear.Class (Array (..)) where
 
 import qualified Data.Array.Mutable.Linear as LB
 import Prelude.Linear
@@ -21,6 +21,14 @@ import qualified Prelude as P
 class Dupable (arr a) => Array arr a where
   size :: arr a %1 -> (Ur Int, arr a)
   fromList :: [a] -> (arr a %1 -> Ur b) %1 -> Ur b
+  fromList xs f =
+    let len = P.length xs
+     in unsafeAlloc len (f . go 0 xs)
+    where
+      go :: Int -> [a] -> arr a %1 -> arr a
+      go !_ [] arr = arr
+      go !i (x : xs) arr =
+        go (i + 1) xs (unsafeSet i x arr)
   fill :: a -> arr a %1 -> arr a
   fill a arr = size arr & \(Ur sz, arr) -> go 0 sz arr
     where
