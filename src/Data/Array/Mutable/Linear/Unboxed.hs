@@ -34,6 +34,7 @@ module Data.Array.Mutable.Linear.Unboxed (
   unsafeResize,
   map,
   mapSame,
+  findIndex,
 ) where
 
 import Data.Alloc.Linearly.Token
@@ -202,6 +203,19 @@ mapSame (f :: a -> b) arr =
               go (i + 1) j src
 
 {-# RULES "map/mapSame" map = mapSame #-}
+
+findIndex :: U.Unbox a => (a -> Bool) -> UArray a %1 -> (Ur (Maybe Int), UArray a)
+{-# INLINE findIndex #-}
+findIndex (p :: a -> Bool) arr = size arr & \(Ur sz, arr) -> loop 0 sz arr
+  where
+    loop :: Int -> Int -> UArray a %1 -> (Ur (Maybe Int), UArray a)
+    loop !i !sz arr
+      | i == sz = (Ur Nothing, arr)
+      | otherwise =
+          unsafeGet i arr & \(Ur a, arr) ->
+            if p a
+              then (Ur (Just i), arr)
+              else loop (i + 1) sz arr
 
 instance (U.Unbox a) => C.Array UArray a where
   unsafeAlloc = unsafeAlloc
