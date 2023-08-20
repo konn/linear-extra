@@ -33,6 +33,7 @@ module Data.Array.Mutable.Linear.Unboxed (
   unsafeSlice,
   unsafeResize,
   map,
+  mapSame,
 ) where
 
 import Data.Alloc.Linearly.Token
@@ -175,6 +176,7 @@ fromListL l (xs :: [a]) =
       go (i + 1) xs (unsafeSet i x arr)
 
 map :: (U.Unbox a, U.Unbox b) => (a -> b) -> UArray a %1 -> UArray b
+{-# INLINE [1] map #-}
 map (f :: a -> b) arr =
   size arr & \(Ur sz, arr) ->
     unsafeAllocBeside sz arr & \(dst, src) -> go 0 sz src dst
@@ -186,6 +188,20 @@ map (f :: a -> b) arr =
           unsafeGet i src & \(Ur a, src) ->
             unsafeSet i (f a) dst & \dst ->
               go (i + 1) j src dst
+
+mapSame :: (U.Unbox a) => (a -> a) -> UArray a %1 -> UArray a
+mapSame (f :: a -> b) arr =
+  size arr & \(Ur sz, src) -> go 0 sz src
+  where
+    go :: Int -> Int -> UArray a %1 -> UArray a
+    go !i !j src
+      | i == j = src
+      | otherwise =
+          unsafeGet i src & \(Ur a, src) ->
+            unsafeSet i (f a) src & \src ->
+              go (i + 1) j src
+
+{-# RULES "map/mapSame" map = mapSame #-}
 
 instance (U.Unbox a) => C.Array UArray a where
   unsafeAlloc = unsafeAlloc
