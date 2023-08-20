@@ -14,6 +14,7 @@ import Data.Alloc.Linearly.Token.Internal
 import qualified Data.Array.Mutable.Linear as MA
 import qualified Data.HashMap.Mutable.Linear as LHM
 import qualified Data.Set.Mutable.Linear as LSet
+import Data.Unrestricted.Linear (dup2)
 import qualified Data.Vector.Mutable.Linear as MV
 import qualified Unsafe.Linear as Unsafe
 
@@ -23,6 +24,9 @@ class HasLinearWitness a where
 
 linearWitness :: HasLinearWitness a => a %1 -> (a, Linearly)
 linearWitness = linearWitness_
+
+instance HasLinearWitness Linearly where
+  linearWitness_ = dup2
 
 deriving anyclass instance HasLinearWitness (MA.Array a)
 
