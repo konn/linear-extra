@@ -30,12 +30,14 @@ module Data.Vector.Mutable.Linear.Generic (
   pop,
   shrinkToFit,
   mapMaybe,
+  mapMaybeSame,
   filter,
   slice,
   toList,
 ) where
 
 import qualified Control.Functor.Linear as C
+import Control.Monad (guard)
 import Data.Array.Mutable.Linear.Class (Array)
 import qualified Data.Array.Mutable.Linear.Class as Array
 import qualified Data.Bifunctor.Linear as BiL
@@ -187,7 +189,11 @@ unsafeResize newSize (Vec size' ma) =
 
 -- | Filters the vector in-place. It does not deallocate unused capacity, use 'shrinkToFit' for that if necessary.
 filter :: (Array arr a) => Vector arr a %1 -> (a -> Bool) -> Vector arr a
-filter (vec :: Vector arr a) (p :: a -> Bool) =
+filter vec p = mapMaybeSame vec \x -> x P.<$ guard (p x)
+
+-- | Analogous to 'mapMaybe', but has the same type.
+mapMaybeSame :: (Array arr a) => Vector arr a %1 -> (a -> Maybe a) -> Vector arr a
+mapMaybeSame (vec :: Vector arr a) (p :: a -> Maybe a) =
   size vec & \(Ur s, vec') -> go 0 0 s vec'
   where
     go ::
@@ -206,9 +212,9 @@ filter (vec :: Vector arr a) (p :: a -> Bool) =
       -- the write cursor; otherwise keep the write cursor skipping the element.
       | otherwise =
           unsafeGet r vec' & \(Ur a, vec'') ->
-            if p a
-              then go (r + 1) (w + 1) s (unsafeSet w a vec'')
-              else go (r + 1) w s vec''
+            case p a of
+              Just a' -> go (r + 1) (w + 1) s (unsafeSet w a' vec'')
+              Nothing -> go (r + 1) w s vec''
 
 {- | A version of 'fmap' which can throw out elements.
 
@@ -220,6 +226,7 @@ mapMaybe ::
   Vector arr a %1 ->
   (a -> Maybe b) ->
   Vector arr b
+{-# INLINE [1] mapMaybe #-}
 mapMaybe (src :: Vector arr a) (f :: a -> Maybe b) =
   size src & \(Ur s, Vec n src) ->
     Array.unsafeAllocBeside n src & \(dst, src) ->
@@ -245,6 +252,8 @@ mapMaybe (src :: Vector arr a) (f :: a -> Maybe b) =
                   go (r + 1) (w + 1) s src (Array.unsafeSet w b dst)
               | otherwise ->
                   go (r + 1) w s src dst
+
+{-# RULES "mapMaybe/Same" mapMaybe = mapMaybeSame #-}
 
 slice :: (HasCallStack, Array arr a) => Int -> Int -> Vector arr a %1 -> Vector arr a
 slice from newSize (Vec oldSize arr)
