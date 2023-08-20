@@ -32,6 +32,7 @@ module Data.Array.Mutable.Linear.Unboxed (
   freeze,
   unsafeSlice,
   unsafeResize,
+  map,
 ) where
 
 import Data.Alloc.Linearly.Token
@@ -42,7 +43,7 @@ import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 import qualified GHC.Base as GHC
 import GHC.Stack (HasCallStack)
-import Prelude.Linear
+import Prelude.Linear hiding (map)
 import System.IO.Unsafe (unsafeDupablePerformIO)
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
@@ -172,6 +173,19 @@ fromListL l (xs :: [a]) =
     go !_ [] arr = arr
     go !i (x : xs) arr =
       go (i + 1) xs (unsafeSet i x arr)
+
+map :: (U.Unbox a, U.Unbox b) => (a -> b) -> UArray a %1 -> UArray b
+map (f :: a -> b) arr =
+  size arr & \(Ur sz, arr) ->
+    unsafeAllocBeside sz arr & \(dst, src) -> go 0 sz src dst
+  where
+    go :: Int -> Int -> UArray a %1 -> UArray b %1 -> UArray b
+    go !i !j src dst
+      | i == j = src `lseq` dst
+      | otherwise =
+          unsafeGet i src & \(Ur a, src) ->
+            unsafeSet i (f a) dst & \dst ->
+              go (i + 1) j src dst
 
 instance (U.Unbox a) => C.Array UArray a where
   unsafeAlloc = unsafeAlloc
