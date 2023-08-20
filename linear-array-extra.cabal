@@ -35,6 +35,7 @@ library
       Data.Array.Polarized.Push.Extra
       Data.Unrestricted.Linear.Orphans.Vector
       Data.Vector.Mutable.Linear.Generic
+      Data.Vector.Mutable.Linear.Unboxed
   other-modules:
       Paths_linear_array_extra
   hs-source-dirs:

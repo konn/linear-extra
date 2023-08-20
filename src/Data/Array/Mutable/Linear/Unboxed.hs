@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -17,6 +18,7 @@ module Data.Array.Mutable.Linear.Unboxed (
   alloc,
   unsafeAlloc,
   unsafeAllocBeside,
+  fromList,
   fill,
   unsafeSet,
   set,
@@ -92,6 +94,7 @@ unsafeGet i = Unsafe.toLinear \(UArray mu) ->
   case GHC.runRW# (GHC.unIO (MU.read mu i)) of
     (# _, a #) -> (Ur a, UArray mu)
 
+-- | /O(1)/ freeze
 freeze :: U.Unbox a => UArray a %1 -> Ur (U.Vector a)
 freeze = Unsafe.toLinear \(UArray arr) ->
   case GHC.runRW# (GHC.unIO (U.unsafeFreeze arr)) of
@@ -127,9 +130,20 @@ instance (U.Unbox a) => Dupable (UArray a) where
     (UArray mu, UArray (unsafeDupablePerformIO (MU.clone mu)))
   {-# NOINLINE dup2 #-}
 
-instance (U.Unbox a, Consumable a) => C.Array UArray a where
+fromList :: U.Unbox a => [a] -> (UArray a %1 -> Ur b) %1 -> Ur b
+fromList (xs :: [a]) f =
+  let len = P.length xs
+   in unsafeAlloc len (f . go 0 xs)
+  where
+    go :: Int -> [a] -> UArray a %1 -> UArray a
+    go !_ [] arr = arr
+    go !i (x : xs) arr =
+      go (i + 1) xs (unsafeSet i x arr)
+
+instance (U.Unbox a) => C.Array UArray a where
   unsafeAlloc = unsafeAlloc
   unsafeAllocBeside = unsafeAllocBeside
+  fromList = fromList
   fill = fill
   unsafeSet = unsafeSet
   size = size
