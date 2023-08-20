@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
@@ -16,9 +18,12 @@ module Data.Array.Mutable.Linear.Unboxed (
   UArray (),
   Unbox,
   alloc,
+  allocL,
   unsafeAlloc,
+  unsafeAllocL,
   unsafeAllocBeside,
   fromList,
+  fromListL,
   fill,
   unsafeSet,
   set,
@@ -29,6 +34,8 @@ module Data.Array.Mutable.Linear.Unboxed (
   unsafeResize,
 ) where
 
+import Data.Alloc.Linearly.Token
+import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness)
 import qualified Data.Array.Mutable.Linear.Class as C
 import Data.Vector.Unboxed (Unbox)
 import qualified Data.Vector.Unboxed as U
@@ -41,6 +48,7 @@ import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
 
 newtype UArray a = UArray (U.MVector GHC.RealWorld a)
+  deriving anyclass (HasLinearWitness)
 
 alloc :: (HasCallStack, U.Unbox a) => Int -> a -> (UArray a %1 -> Ur b) %1 -> Ur b
 {-# NOINLINE alloc #-}
@@ -49,10 +57,25 @@ alloc n x f
   | otherwise = case GHC.runRW# (GHC.unIO (MU.replicate n x)) of
       (# _, arr #) -> f (UArray arr)
 
+allocL :: (HasCallStack, U.Unbox a) => Linearly %1 -> Int -> a -> UArray a
+{-# NOINLINE allocL #-}
+allocL l n x
+  | n < 0 = error ("UArray.alloc: Negative length: " <> show n) l
+  | otherwise =
+      consume l & \() -> case GHC.runRW# (GHC.unIO (MU.replicate n x)) of
+        (# _, arr #) -> UArray arr
+
 unsafeAlloc :: U.Unbox a => Int -> (UArray a %1 -> Ur b) %1 -> Ur b
 {-# NOINLINE unsafeAlloc #-}
 unsafeAlloc n f = case GHC.runRW# (GHC.unIO (MU.new n)) of
   (# _, arr #) -> f (UArray arr)
+
+unsafeAllocL :: U.Unbox a => Linearly %1 -> Int -> UArray a
+{-# NOINLINE unsafeAllocL #-}
+unsafeAllocL l n =
+  consume l & \() ->
+    case GHC.runRW# (GHC.unIO (MU.new n)) of
+      (# _, arr #) -> UArray arr
 
 unsafeAllocBeside :: U.Unbox a => Int -> UArray b %1 -> (UArray a, UArray b)
 {-# NOINLINE unsafeAllocBeside #-}
@@ -140,9 +163,18 @@ fromList (xs :: [a]) f =
     go !i (x : xs) arr =
       go (i + 1) xs (unsafeSet i x arr)
 
+fromListL :: U.Unbox a => Linearly %1 -> [a] -> UArray a
+fromListL l (xs :: [a]) =
+  let len = P.length xs
+   in go 0 xs (unsafeAllocL l len)
+  where
+    go :: Int -> [a] -> UArray a %1 -> UArray a
+    go !_ [] arr = arr
+    go !i (x : xs) arr =
+      go (i + 1) xs (unsafeSet i x arr)
+
 instance (U.Unbox a) => C.Array UArray a where
   unsafeAlloc = unsafeAlloc
-  unsafeAllocBeside = unsafeAllocBeside
   fromList = fromList
   fill = fill
   unsafeSet = unsafeSet
@@ -150,3 +182,4 @@ instance (U.Unbox a) => C.Array UArray a where
   unsafeGet = unsafeGet
   unsafeSlice = unsafeSlice
   unsafeResize = unsafeResize
+  unsafeAllocL = unsafeAllocL

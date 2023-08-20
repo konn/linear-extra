@@ -18,7 +18,9 @@ module Data.Array.Mutable.Unlifted.Linear.Primitive (
   unPrimArray#,
   lseq,
   alloc,
+  allocL,
   unsafeAlloc,
+  unsafeAllocL,
   allocBeside,
   unsafeAllocBeside,
   size,
@@ -32,6 +34,7 @@ module Data.Array.Mutable.Unlifted.Linear.Primitive (
   dup2,
 ) where
 
+import Data.Alloc.Linearly.Token
 import Data.Primitive (MutableByteArray#, PrimArray (..))
 import Data.Primitive.Types
 import GHC.Exts (Proxy#, (*#))
@@ -53,6 +56,16 @@ lseq = Unsafe.toLinear2 \_ b -> b
 
 infix 0 `lseq`
 
+allocL :: forall a. Prim a => Linearly %1 -> Int -> a -> PrimArray# a
+{-# NOINLINE allocL #-}
+allocL tok (GHC.I# n#) a =
+  let byteSize# = n# GHC.*# sizeOf# (undefined :: a)
+      new = GHC.runRW# P.$ \s ->
+        case GHC.newByteArray# byteSize# s of
+          (# s, arr #) -> case setByteArray# arr 0# n# a s of
+            !_ -> PrimArray# arr
+   in consume tok & \() -> new
+
 -- | _See also_: 'unsafeAlloc'
 alloc :: forall a b. Prim a => Int -> a -> (PrimArray# a %1 -> Ur b) %1 -> Ur b
 alloc (GHC.I# n#) a f =
@@ -73,6 +86,16 @@ unsafeAlloc (GHC.I# n#) f =
           (# _, arr #) -> PrimArray# arr
    in f new
 {-# NOINLINE unsafeAlloc #-} -- prevents runRW# from floating outwards
+
+-- | Allocates primitive array but WITHOUT initialisation.
+unsafeAllocL :: forall a. Prim a => Linearly %1 -> Int -> PrimArray# a
+unsafeAllocL l (GHC.I# n#) =
+  let byteSize# = n# GHC.*# sizeOf# (undefined :: a)
+      new = GHC.runRW# P.$ \s ->
+        case GHC.newByteArray# byteSize# s of
+          (# _, arr #) -> PrimArray# arr
+   in consume l & \() -> new
+{-# NOINLINE unsafeAllocL #-} -- prevents runRW# from floating outwards
 
 fill :: Prim a => a -> PrimArray# a %1 -> PrimArray# a
 fill (a :: a) = Unsafe.toLinear \(PrimArray# arr :: PrimArray# a) ->

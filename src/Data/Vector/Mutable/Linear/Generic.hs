@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
@@ -14,9 +16,12 @@
 module Data.Vector.Mutable.Linear.Generic (
   Vector (),
   empty,
+  emptyL,
   constant,
+  constantL,
   fromArray,
   fromList,
+  fromListL,
   size,
   capacity,
   set,
@@ -38,6 +43,8 @@ module Data.Vector.Mutable.Linear.Generic (
 
 import qualified Control.Functor.Linear as C
 import Control.Monad (guard)
+import Data.Alloc.Linearly.Token
+import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness)
 import Data.Array.Mutable.Linear.Class (Array)
 import qualified Data.Array.Mutable.Linear.Class as Array
 import qualified Data.Bifunctor.Linear as BiL
@@ -48,6 +55,7 @@ import qualified Prelude as P
 
 data Vector arr a where
   Vec :: {-# UNPACK #-} !Int -> arr a %1 -> Vector arr a
+  deriving anyclass (HasLinearWitness)
 
 instance Array arr a => Consumable (Vector arr a) where
   consume (Vec n arr) = n `lseq` consume arr
@@ -59,14 +67,26 @@ instance Array arr a => Dupable (Vector arr a) where
 empty :: Array.Array arr a => (Vector arr a %1 -> Ur b) %1 -> Ur b
 empty f = Array.unsafeAlloc 0 (f . Vec 0)
 
+emptyL :: Array.Array arr a => Linearly %1 -> Vector arr a
+emptyL l = Vec 0 $ Array.unsafeAllocL l 0
+
 constant :: (HasCallStack, Array arr a) => Int -> a -> (Vector arr a %1 -> Ur b) %1 -> Ur b
 constant n a f
   | n < 0 = error ("constant: must be non-negative but got: " <> show n) f
   | otherwise = Array.unsafeAlloc n (f . Vec n . Array.fill a)
 
+constantL :: (HasCallStack, Array arr a) => Linearly %1 -> Int -> a -> Vector arr a
+constantL l n a
+  | n < 0 = error ("constant: must be non-negative but got: " <> show n) l
+  | otherwise = Vec n (Array.fill a (Array.unsafeAllocL l n))
+
 -- | Allocator from a list
 fromList :: (Array arr a) => [a] -> (Vector arr a %1 -> Ur b) %1 -> Ur b
 fromList xs f = Array.fromList xs (f . fromArray)
+
+-- | Allocator from a list
+fromListL :: (Array arr a) => Linearly %1 -> [a] -> Vector arr a
+fromListL l xs = fromArray (Array.fromListL l xs)
 
 fromArray :: Array arr a => arr a %1 -> Vector arr a
 fromArray arr =

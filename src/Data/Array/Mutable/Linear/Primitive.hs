@@ -1,5 +1,6 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
@@ -18,10 +19,13 @@ module Data.Array.Mutable.Linear.Primitive (
 
   -- * Performing Computations with Arrays
   alloc,
+  allocL,
   unsafeAlloc,
+  unsafeAllocL,
   allocBeside,
   unsafeAllocBeside,
   fromList,
+  fromListL,
 
   -- * Modifications
   fill,
@@ -47,6 +51,8 @@ module Data.Array.Mutable.Linear.Primitive (
   unsafeWrite,
 ) where
 
+import Data.Alloc.Linearly.Token
+import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness)
 import qualified Data.Array.Mutable.Linear.Class as C
 import Data.Array.Mutable.Unlifted.Linear.Primitive (PrimArray#)
 import qualified Data.Array.Mutable.Unlifted.Linear.Primitive as Unlifted
@@ -58,6 +64,7 @@ import Prelude.Linear hiding (map, read)
 import qualified Prelude as P
 
 data PrimArray a = PrimArray (PrimArray# a)
+  deriving anyclass (HasLinearWitness)
 
 instance Consumable (PrimArray a) where
   consume :: PrimArray a %1 -> ()
@@ -81,10 +88,24 @@ alloc s x f
   | s < 0 = error "PrimArray.alloc: negative size" f
   | otherwise = Unlifted.alloc s x \arr# -> f (PrimArray arr#)
 
+{- | Allocate a constant array given a size and an initial value
+The size must be non-negative, otherwise this errors.
+
+/See also/: 'unsafeAlloc'
+-}
+allocL :: (HasCallStack, Prim a) => Linearly %1 -> Int -> a -> PrimArray a
+allocL l s x
+  | s < 0 = error "PrimArray.alloc: negative size" l
+  | otherwise = PrimArray (Unlifted.allocL l s x)
+
 -- | Same as 'alloc', but without initial value.
 unsafeAlloc :: (Prim a) => Int -> (PrimArray a %1 -> Ur b) %1 -> Ur b
 {-# ANN unsafeAlloc "HLint: ignore Avoid lambda" #-}
 unsafeAlloc s f = Unlifted.unsafeAlloc s \arr# -> f (PrimArray arr#)
+
+-- | Same as 'alloc', but without initial value.
+unsafeAllocL :: (Prim a) => Linearly %1 -> Int -> PrimArray a
+unsafeAllocL l s = PrimArray (Unlifted.unsafeAllocL l s)
 
 {- | Allocate a constant array given a size and an initial value,
 using another array as a uniqueness proof.
@@ -118,6 +139,21 @@ fromList list (f :: PrimArray a %1 -> Ur b) =
   unsafeAlloc
     (P.length list)
     (f . insert)
+  where
+    insert :: PrimArray a %1 -> PrimArray a
+    insert = doWrites (P.zip list [0 ..])
+
+    doWrites :: [(a, Int)] -> PrimArray a %1 -> PrimArray a
+    doWrites [] arr = arr
+    doWrites ((a, ix) : xs) arr = doWrites xs (unsafeSet ix a arr)
+
+fromListL ::
+  (Prim a) =>
+  Linearly %1 ->
+  [a] ->
+  PrimArray a
+fromListL l (list :: [a]) =
+  insert $ unsafeAllocL l (P.length list)
   where
     insert :: PrimArray a %1 -> PrimArray a
     insert = doWrites (P.zip list [0 ..])
@@ -292,7 +328,7 @@ instance Prim a => C.Array PrimArray a where
   size = size
   fromList = fromList
   unsafeAlloc = unsafeAlloc
-  unsafeAllocBeside = unsafeAllocBeside
+  unsafeAllocL = unsafeAllocL
   fill = fill
   unsafeSet = unsafeSet
   unsafeGet = unsafeGet

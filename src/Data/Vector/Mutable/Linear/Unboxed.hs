@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
@@ -14,9 +16,12 @@
 module Data.Vector.Mutable.Linear.Unboxed (
   Vector (),
   empty,
+  emptyL,
   constant,
+  constantL,
   fromArray,
   fromList,
+  fromListL,
   size,
   capacity,
   set,
@@ -37,6 +42,8 @@ module Data.Vector.Mutable.Linear.Unboxed (
 ) where
 
 import qualified Control.Functor.Linear as C
+import Data.Alloc.Linearly.Token
+import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness)
 import Data.Array.Mutable.Linear.Unboxed (UArray)
 import qualified Data.Array.Mutable.Linear.Unboxed as Array
 import qualified Data.Bifunctor.Linear as BiL
@@ -48,6 +55,7 @@ import qualified Prelude as P
 
 data Vector a where
   Vec :: {-# UNPACK #-} !Int -> UArray a %1 -> Vector a
+  deriving anyclass (HasLinearWitness)
 
 instance U.Unbox a => Consumable (Vector a) where
   consume (Vec n arr) = n `lseq` consume arr
@@ -59,14 +67,26 @@ instance U.Unbox a => Dupable (Vector a) where
 empty :: U.Unbox a => (Vector a %1 -> Ur b) %1 -> Ur b
 empty f = Array.unsafeAlloc 0 (f . Vec 0)
 
+emptyL :: U.Unbox a => Linearly %1 -> Vector a
+emptyL l = Vec 0 $ Array.unsafeAllocL l 0
+
 constant :: (HasCallStack, U.Unbox a) => Int -> a -> (Vector a %1 -> Ur b) %1 -> Ur b
 constant n a f
   | n < 0 = error ("constant: must be non-negative but got: " <> show n) f
   | otherwise = Array.unsafeAlloc n (f . Vec n . Array.fill a)
 
+constantL :: (HasCallStack, U.Unbox a) => Linearly %1 -> Int -> a -> Vector a
+constantL l n a
+  | n < 0 = error ("constant: must be non-negative but got: " <> show n) l
+  | otherwise = Vec n (Array.fill a (Array.unsafeAllocL l n))
+
 -- | Allocator from a list
 fromList :: (U.Unbox a) => [a] -> (Vector a %1 -> Ur b) %1 -> Ur b
 fromList xs f = Array.fromList xs (f . fromArray)
+
+-- | Allocator from a list
+fromListL :: (U.Unbox a) => Linearly %1 -> [a] -> Vector a
+fromListL l xs = fromArray $ Array.fromListL l xs
 
 fromArray :: U.Unbox a => UArray a %1 -> Vector a
 fromArray arr =
