@@ -29,6 +29,7 @@ module Data.Array.Mutable.Linear.Unboxed (
   set,
   size,
   unsafeGet,
+  get,
   freeze,
   unsafeSlice,
   unsafeResize,
@@ -113,6 +114,9 @@ unsafeSet :: U.Unbox a => Int -> a -> UArray a %1 -> UArray a
 unsafeSet i a = Unsafe.toLinear \(UArray arr) ->
   case GHC.runRW# (GHC.unIO (MU.write arr i a)) of
     (# _, () #) -> UArray arr
+
+get :: (HasCallStack, U.Unbox a) => Int -> UArray a %1 -> (Ur a, UArray a)
+get i arr = unsafeGet i (assertIndexInRange i arr)
 
 unsafeGet :: U.Unbox a => Int -> UArray a %1 -> (Ur a, UArray a)
 {-# NOINLINE unsafeGet #-}
