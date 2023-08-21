@@ -21,7 +21,7 @@ import qualified Prelude as P
 
 allocL :: Linearly %1 -> Int -> a -> Array# a
 allocL l (GHC.I# s) a =
-  consume l & \() -> GHC.runRW# P.$ \st ->
-    case GHC.newArray# s a st of
+  consume l & \() ->
+    case GHC.runRW# P.$ GHC.newArray# s a of
       (# _, arr #) -> unsafeCoerce# arr
 {-# NOINLINE allocL #-} -- prevents runRW# from floating outwards
