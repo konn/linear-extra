@@ -12,11 +12,14 @@ module Data.Array.Mutable.Linear.UnboxedSpec (
   test_fill,
   test_map,
   test_mapSame,
+  test_findIndex,
 ) where
 
 import Data.Alloc.Linearly.Token (linearly)
 import qualified Data.Array.Mutable.Linear.Unboxed as LUA
 import Data.Functor ((<&>))
+import Data.List (findIndex)
+import Data.Maybe
 import Data.Unrestricted.Linear (unur)
 import qualified Data.Vector.Unboxed as U
 import qualified Prelude.Linear as PL
@@ -280,4 +283,34 @@ testMapLikeFor mapLike arg ret = do
       .$ ( "mapped"
          , unur PL.$ linearly \l ->
             LUA.freeze (mapLike f (LUA.fromListL l xs))
+         )
+
+test_findIndex :: TestTree
+test_findIndex =
+  testGroup
+    "findIndex"
+    [ testGroup
+        "commutes with fromListL"
+        [ testProperty "Int" $
+            testFindIndex (F.int $ F.between (-10, 10))
+        , testProperty "Bool -> Bool" $
+            testFindIndex (F.bool True)
+        , testProperty "Double -> Double" $
+            testFindIndex (doubleG 8)
+        ]
+    ]
+
+testFindIndex :: (U.Unbox a, Show a, F.Function a) => Gen a -> Property ()
+testFindIndex argG = do
+  Fn p <- F.gen $ F.fun $ F.bool True
+  xs <- F.gen $ F.list (F.between (0, 128)) argG
+  let resl = findIndex p xs
+  let len = length xs
+  label "length" [classifyRangeBy 16 len]
+  collect "found" [isJust resl]
+  F.assert $
+    P.expect resl
+      .$ ( "linear"
+         , unur PL.$ linearly \l ->
+            fst' (LUA.findIndex p (LUA.fromListL l xs))
          )
