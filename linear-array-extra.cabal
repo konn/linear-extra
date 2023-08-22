@@ -75,15 +75,21 @@ test-suite linear-array-extra-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Data.Array.Mutable.Linear.UnboxedSpec
       Paths_linear_array_extra
   hs-source-dirs:
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-tool-depends:
+      tasty-discover:tasty-discover
   build-depends:
       base >=4.7 && <5
+    , falsify
     , linear-array-extra
-    , linear-base >=0.2
+    , linear-base
     , linear-generics
     , primitive
+    , tasty
+    , tasty-hunit
     , vector
   default-language: Haskell2010
