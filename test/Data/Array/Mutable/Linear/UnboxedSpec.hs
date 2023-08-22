@@ -14,6 +14,7 @@ module Data.Array.Mutable.Linear.UnboxedSpec (
   test_mapSame,
   test_findIndex,
   test_unsafeResize,
+  test_unsafeSlice,
 ) where
 
 import Data.Alloc.Linearly.Token (linearly)
@@ -115,7 +116,7 @@ test_unsafeAllocL =
 classifyRangeBy :: Int -> Int -> String
 classifyRangeBy _ 0 = "0"
 classifyRangeBy q n =
-  let nDiv = n `quot` q
+  let nDiv = (n - 1) `quot` q
    in show (nDiv * q + 1, (nDiv + 1) * q)
 
 test_fromList :: TestTree
@@ -201,6 +202,9 @@ test_set =
 
 fst' :: PL.Consumable b => (a, b) %1 -> a
 fst' = PL.uncurry (PL.flip PL.lseq)
+
+snd' :: PL.Consumable a => (a, b) %1 -> b
+snd' = PL.uncurry PL.lseq
 
 test_fill :: TestTree
 test_fill =
@@ -387,4 +391,37 @@ checkUnsafeResizeLarger g = do
       .$ ( "actual initial segment"
          , U.take len $ unur PL.$ linearly \l ->
             LUA.freeze PL.$ LUA.unsafeResize (len + growth) PL.$ LUA.fromListL l xs
+         )
+
+test_unsafeSlice :: TestTree
+test_unsafeSlice =
+  testGroup
+    "unsafeSlice"
+    [ testGroup
+        "commutes with freeze . snd'"
+        [ testProperty "Int" $ checkUnsafeSlice $ F.int $ F.withOrigin (-10, 10) 0
+        , testProperty "Double" $ checkUnsafeSlice $ doubleG 8
+        , testProperty "Double" $ checkUnsafeSlice $ F.bool True
+        ]
+    ]
+
+checkUnsafeSlice :: (Show a, Eq a, U.Unbox a) => Gen a -> Property ()
+checkUnsafeSlice g = do
+  xs <- gen $ F.list (F.between (0, 128)) g
+  let len = length xs
+  label "length" [classifyRangeBy 16 len]
+  off <- gen $ F.int $ F.between (0, len)
+  label
+    "% offset"
+    [ if len == 0
+        then "N/A"
+        else classifyRangeBy 10 $ 100 * off `quot` len
+    ]
+  ran <- gen $ F.int $ F.between (0, len - off)
+  label "range" [classifyRangeBy 16 ran]
+  F.assert $
+    P.expect (U.unsafeSlice off ran $ U.fromList xs)
+      .$ ( "actual slice"
+         , unur PL.$ linearly \l ->
+            LUA.freeze PL.$ snd' PL.$ LUA.unsafeSlice off ran PL.$ LUA.fromListL l xs
          )
