@@ -13,6 +13,7 @@ module Data.Array.Mutable.Linear.UnboxedSpec (
   test_map,
   test_mapSame,
   test_findIndex,
+  test_unsafeResize,
 ) where
 
 import Data.Alloc.Linearly.Token (linearly)
@@ -21,6 +22,7 @@ import Data.Functor ((<&>))
 import Data.List (findIndex)
 import Data.Maybe
 import Data.Unrestricted.Linear (unur)
+import qualified Data.Unrestricted.Linear as Ur
 import qualified Data.Vector.Unboxed as U
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F
@@ -40,7 +42,7 @@ test_alloc =
         [ testProperty "Int" do
             len <- gen $ F.int (F.between (0, 128))
             label "length" [classifyRangeBy 16 len]
-            x <- gen $ F.int (F.between (-10, 10))
+            x <- gen $ F.int (F.withOrigin (-10, 10) 0)
             F.assert $
               P.expect (U.replicate len x)
                 .$ ("alloc", unur (LUA.alloc len x LUA.freeze))
@@ -62,7 +64,7 @@ test_allocL =
         "linearly (\\l -> freeze (allocL l n x)) = alloc n x freeze"
         [ testProperty "Int" do
             len <- gen $ F.int (F.between (0, 128))
-            x <- gen $ F.int (F.between (-10, 10))
+            x <- gen $ F.int (F.withOrigin (-10, 10) 0)
             label "length" [classifyRangeBy 16 len]
             F.assert $
               P.eq
@@ -80,7 +82,7 @@ test_unsafeAlloc =
         [ testProperty "Int" do
             len <- gen $ F.int (F.between (0, 128))
             label "length" [classifyRangeBy 16 len]
-            x <- gen $ F.int (F.between (-10, 10))
+            x <- gen $ F.int (F.withOrigin (-10, 10) 0)
             F.assert $
               P.expect (U.replicate len x)
                 .$ ( "unsafeAlloc"
@@ -100,7 +102,7 @@ test_unsafeAllocL =
         [ testProperty "Int" do
             len <- gen $ F.int (F.between (0, 128))
             label "length" [classifyRangeBy 16 len]
-            x <- gen $ F.int (F.between (-10, 10))
+            x <- gen $ F.int (F.withOrigin (-10, 10) 0)
             F.assert $
               P.expect (U.replicate len x)
                 .$ ( "unsafeAlloc"
@@ -123,7 +125,7 @@ test_fromList =
     [ testGroup
         "unur (fromList xs freeze) = U.fromList xs"
         [ testProperty "Int" do
-            xs <- gen $ F.list (F.between (0, 128)) (F.int (F.between (-10, 10)))
+            xs <- gen $ F.list (F.between (0, 128)) (F.int (F.withOrigin (-10, 10) 0))
             label "length" [classifyRangeBy 16 $ length xs]
             F.assert $
               P.eq
@@ -145,7 +147,7 @@ test_fromListL =
     [ testGroup
         "unur (linearly \\l -> freeze (fromListL l xs)) = U.fromList xs"
         [ testProperty "Int" do
-            xs <- gen $ F.list (F.between (0, 128)) (F.int (F.between (-10, 10)))
+            xs <- gen $ F.list (F.between (0, 128)) (F.int (F.withOrigin (-10, 10) 0))
             label "length" [classifyRangeBy 16 $ length xs]
             F.assert $
               P.eq
@@ -170,8 +172,8 @@ test_set =
             len <- gen $ F.int (F.between (1, 128))
             label "length" [classifyRangeBy 16 len]
             i <- gen $ F.int (F.between (0, len - 1))
-            x <- gen $ F.int (F.between (-10, 10))
-            y <- gen $ F.int (F.between (-10, 10))
+            x <- gen $ F.int (F.withOrigin (-10, 10) 0)
+            y <- gen $ F.int (F.withOrigin (-10, 10) 0)
             collect "x == y" [show $ x == y]
             F.assert $
               P.expect x
@@ -183,8 +185,8 @@ test_set =
             len <- gen $ F.int (F.between (1, 128))
             label "length" [classifyRangeBy 16 len]
             i <- gen $ F.int (F.between (0, len - 1))
-            x <- gen $ F.int (F.between (-10, 10))
-            y <- gen $ F.int (F.between (-10, 10))
+            x <- gen $ F.int (F.withOrigin (-10, 10) 0)
+            y <- gen $ F.int (F.withOrigin (-10, 10) 0)
             collect "x == y" [show $ x == y]
             F.assert $
               P.expect x
@@ -209,7 +211,7 @@ test_fill =
         [ testProperty "unsafeAllocL" do
             len <- gen $ F.int (F.between (1, 128))
             label "length" [classifyRangeBy 16 len]
-            x <- gen $ F.int (F.between (-10, 10))
+            x <- gen $ F.int (F.withOrigin (-10, 10) 0)
             F.assert $
               P.expect (U.replicate len x)
                 .$ ( "filled"
@@ -217,10 +219,10 @@ test_fill =
                       LUA.freeze (LUA.fill x (LUA.unsafeAllocL l len))
                    )
         , testProperty "fromListL" do
-            xs <- gen $ F.list (F.between (0, 128)) (F.int (F.between (-10, 10)))
+            xs <- gen $ F.list (F.between (0, 128)) (F.int (F.withOrigin (-10, 10) 0))
             let len = length xs
             label "length" [classifyRangeBy 16 len]
-            x <- gen $ F.int (F.between (-10, 10))
+            x <- gen $ F.int (F.withOrigin (-10, 10) 0)
             F.assert $
               P.expect (U.replicate len x)
                 .$ ( "filled"
@@ -237,11 +239,11 @@ test_map =
     [ testGroup
         "commutes with freeze"
         [ testProperty "Int -> Int" $
-            testMapLikeFor LUA.map (F.int $ F.between (-10, 10)) (F.int $ F.between (-20, 20))
+            testMapLikeFor LUA.map (F.int $ F.withOrigin (-10, 10) 0) (F.int $ F.between (-20, 20))
         , testProperty "Int -> Bool" $
-            testMapLikeFor LUA.map (F.int $ F.between (-10, 10)) (F.bool True)
+            testMapLikeFor LUA.map (F.int $ F.withOrigin (-10, 10) 0) (F.bool True)
         , testProperty "Int -> Double" $
-            testMapLikeFor LUA.map (F.int $ F.between (-10, 10)) (F.properFraction 32 <&> \(F.ProperFraction d) -> d)
+            testMapLikeFor LUA.map (F.int $ F.withOrigin (-10, 10) 0) (F.properFraction 32 <&> \(F.ProperFraction d) -> d)
         , testProperty "Bool -> Bool" $
             testMapLikeFor LUA.map (F.bool True) (F.bool True)
         , testProperty "Double -> Double" $
@@ -256,7 +258,7 @@ test_mapSame =
     [ testGroup
         "commutes with freeze"
         [ testProperty "Int -> Int" $
-            testMapLikeFor LUA.mapSame (F.int $ F.between (-10, 10)) (F.int $ F.between (-20, 20))
+            testMapLikeFor LUA.mapSame (F.int $ F.withOrigin (-10, 10) 0) (F.int $ F.between (-20, 20))
         , testProperty "Bool -> Bool" $
             testMapLikeFor LUA.mapSame (F.bool True) (F.bool True)
         , testProperty "Double -> Double" $
@@ -292,7 +294,7 @@ test_findIndex =
     [ testGroup
         "commutes with fromListL"
         [ testProperty "Int" $
-            testFindIndex (F.int $ F.between (-10, 10))
+            testFindIndex (F.int $ F.withOrigin (-10, 10) 0)
         , testProperty "Bool" $
             testFindIndex (F.bool True)
         , testProperty "Double" $
@@ -313,4 +315,76 @@ testFindIndex argG = do
       .$ ( "linear"
          , unur PL.$ linearly \l ->
             fst' (LUA.findIndex p (LUA.fromListL l xs))
+         )
+
+test_unsafeResize :: TestTree
+test_unsafeResize =
+  testGroup
+    "unsafeResize"
+    [ testGroup
+        "is no-op on when fed with the same length"
+        [ testProperty "Int" $ checkUnsafeResizeSame $ F.int $ F.withOrigin (-10, 10) 0
+        , testProperty "Double" $ checkUnsafeResizeSame $ doubleG 8
+        , testProperty "Double" $ checkUnsafeResizeSame $ F.bool True
+        ]
+    , testGroup
+        "(freeze . unsafeResize n = U.take n) for n < len"
+        [ testProperty "Int" $ checkUnsafeResizeShorter $ F.int $ F.withOrigin (-10, 10) 0
+        , testProperty "Double" $ checkUnsafeResizeShorter $ doubleG 8
+        , testProperty "Double" $ checkUnsafeResizeShorter $ F.bool True
+        ]
+    , testGroup
+        "usafeResize (len + n) has size (len + n) and coincides with the original for initial n-elements"
+        [ testProperty "Int" $ checkUnsafeResizeLarger $ F.int $ F.withOrigin (-10, 10) 0
+        , testProperty "Double" $ checkUnsafeResizeLarger $ doubleG 8
+        , testProperty "Double" $ checkUnsafeResizeLarger $ F.bool True
+        ]
+    ]
+
+checkUnsafeResizeSame :: (Show a, Eq a, U.Unbox a) => Gen a -> Property ()
+checkUnsafeResizeSame g = do
+  xs <- gen $ F.list (F.between (0, 128)) g
+  let len = length xs
+  label "length" [classifyRangeBy 16 len]
+  F.assert $
+    P.satisfies ("pair", uncurry (==))
+      .$ ( "paired"
+         , unur PL.$ linearly \l ->
+            PL.dup2 (LUA.fromListL l xs) PL.& \(ls, rs) ->
+              Ur.lift2
+                (,)
+                (LUA.freeze ls)
+                (LUA.freeze (LUA.unsafeResize len rs))
+         )
+
+checkUnsafeResizeShorter :: (Show a, Eq a, U.Unbox a) => Gen a -> Property ()
+checkUnsafeResizeShorter g = do
+  xs <- gen $ F.list (F.between (0, 128)) g
+  let len = length xs
+  label "length" [classifyRangeBy 16 len]
+  smal <- genWith (\a -> Just $ "Shrink size: " <> show a) $ F.int $ F.between (0, len)
+  F.assert $
+    P.expect (U.take smal $ U.fromList xs)
+      .$ ( "generated"
+         , unur PL.$ linearly \l ->
+            LUA.freeze PL.$ LUA.unsafeResize smal PL.$ LUA.fromListL l xs
+         )
+
+checkUnsafeResizeLarger :: (Show a, Eq a, U.Unbox a) => Gen a -> Property ()
+checkUnsafeResizeLarger g = do
+  xs <- gen $ F.list (F.between (0, 128)) g
+  let len = length xs
+  label "length" [classifyRangeBy 16 len]
+  growth <- genWith (\a -> Just $ "Growth size: " <> show a) $ F.int $ F.between (1, 128)
+  F.assert $
+    P.expect (len + growth)
+      .$ ( "actual size"
+         , U.length $ unur PL.$ linearly \l ->
+            LUA.freeze PL.$ LUA.unsafeResize (len + growth) PL.$ LUA.fromListL l xs
+         )
+  F.assert $
+    P.expect (U.fromList xs)
+      .$ ( "actual initial segment"
+         , U.take len $ unur PL.$ linearly \l ->
+            LUA.freeze PL.$ LUA.unsafeResize (len + growth) PL.$ LUA.fromListL l xs
          )
