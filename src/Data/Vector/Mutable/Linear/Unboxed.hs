@@ -57,7 +57,7 @@ data Vector a where
   Vec :: {-# UNPACK #-} !Int -> UArray a %1 -> Vector a
   deriving anyclass (HasLinearWitness)
 
-instance U.Unbox a => Consumable (Vector a) where
+instance Consumable (Vector a) where
   consume (Vec n arr) = n `lseq` consume arr
 
 instance U.Unbox a => Dupable (Vector a) where
