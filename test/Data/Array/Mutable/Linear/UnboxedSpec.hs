@@ -293,9 +293,9 @@ test_findIndex =
         "commutes with fromListL"
         [ testProperty "Int" $
             testFindIndex (F.int $ F.between (-10, 10))
-        , testProperty "Bool -> Bool" $
+        , testProperty "Bool" $
             testFindIndex (F.bool True)
-        , testProperty "Double -> Double" $
+        , testProperty "Double" $
             testFindIndex (doubleG 8)
         ]
     ]
