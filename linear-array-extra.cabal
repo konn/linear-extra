@@ -75,6 +75,7 @@ test-suite linear-array-extra-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Data.Array.Mutable.Linear.ExtraSpec
       Data.Array.Mutable.Linear.UnboxedSpec
       Paths_linear_array_extra
   hs-source-dirs:
