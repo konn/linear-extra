@@ -4,6 +4,7 @@
 module Data.Array.Mutable.Linear.ExtraSpec (
   test_allocL,
   test_fromListL,
+  test_serialAccess,
 ) where
 
 import Data.Alloc.Linearly.Token (linearly)
@@ -57,4 +58,25 @@ test_fromListL =
               P.expect (V.fromList xs)
                 .$ ("alloc", unur (linearly \l -> LA.freeze PL.$ LA.fromListL l xs))
         ]
+    ]
+
+test_serialAccess :: TestTree
+test_serialAccess =
+  testGroup
+    "Serial Updates has the same meaning with vectors"
+    [ testProperty "Int" $
+        checkSerialUpdateSemantics
+          (F.int $ F.between (-10, 10))
+          LA.fromListL
+          LA.freeze
+    , testProperty "Bool" $
+        checkSerialUpdateSemantics
+          (F.bool True)
+          LA.fromListL
+          LA.freeze
+    , testProperty "Double" $
+        checkSerialUpdateSemantics
+          (doubleG 8)
+          LA.fromListL
+          LA.freeze
     ]

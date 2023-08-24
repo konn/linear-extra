@@ -2,7 +2,7 @@
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Data.Vector.Mutable.Linear.ExtraSpec (test_constantL, test_fromListL, test_emptyL) where
+module Data.Vector.Mutable.Linear.ExtraSpec (test_constantL, test_fromListL, test_emptyL, test_serialAccess) where
 
 import Data.Alloc.Linearly.Token (linearly)
 import Data.Unrestricted.Linear (unur)
@@ -70,4 +70,25 @@ test_fromListL =
               P.expect (V.fromList xs)
                 .$ ("fromListL", unur (linearly \l -> LV.freeze PL.$ LV.fromListL l xs))
         ]
+    ]
+
+test_serialAccess :: TestTree
+test_serialAccess =
+  testGroup
+    "Serial Updates has the same meaning with vectors"
+    [ testProperty "Int" $
+        checkSerialUpdateSemantics
+          (F.int $ F.between (-10, 10))
+          LV.fromListL
+          LV.freeze
+    , testProperty "Bool" $
+        checkSerialUpdateSemantics
+          (F.bool True)
+          LV.fromListL
+          LV.freeze
+    , testProperty "Double" $
+        checkSerialUpdateSemantics
+          (doubleG 8)
+          LV.fromListL
+          LV.freeze
     ]

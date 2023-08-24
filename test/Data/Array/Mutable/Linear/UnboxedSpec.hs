@@ -15,6 +15,7 @@ module Data.Array.Mutable.Linear.UnboxedSpec (
   test_findIndex,
   test_unsafeResize,
   test_unsafeSlice,
+  test_serialAccess,
 ) where
 
 import Data.Alloc.Linearly.Token (linearly)
@@ -411,3 +412,24 @@ checkUnsafeSlice g = do
          , unur PL.$ linearly \l ->
             LUA.freeze PL.$ snd' PL.$ LUA.unsafeSlice off ran PL.$ LUA.fromListL l xs
          )
+
+test_serialAccess :: TestTree
+test_serialAccess =
+  testGroup
+    "Serial Updates has the same meaning with vectors"
+    [ testProperty "Int" $
+        checkSerialUpdateSemantics
+          (F.int $ F.between (-10, 10))
+          LUA.fromListL
+          LUA.freeze
+    , testProperty "Bool" $
+        checkSerialUpdateSemantics
+          (F.bool True)
+          LUA.fromListL
+          LUA.freeze
+    , testProperty "Double" $
+        checkSerialUpdateSemantics
+          (doubleG 8)
+          LUA.fromListL
+          LUA.freeze
+    ]

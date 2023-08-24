@@ -10,6 +10,7 @@ module Data.Vector.Mutable.Linear.UnboxedSpec (
   test_empty,
   test_emptyL,
   test_fromArray,
+  test_serialAccess,
 ) where
 
 import Data.Alloc.Linearly.Token (linearly)
@@ -214,16 +215,12 @@ checkFromArrayHomomorphism name g =
         start <- F.gen $ F.int $ F.between (0, fromIntegral len)
         label
           "start %"
-          [ if len == 0
-              then "-"
-              else classifyRangeBy 10 $ 100 * start `quot` fromIntegral len
+          [ classifyPercent start $ fromIntegral len
           ]
         range <- F.gen $ F.int $ F.between (0, fromIntegral len - start)
         label
           "range %"
-          [ if len == 0
-              then "-"
-              else classifyRangeBy 10 $ 100 * range `quot` fromIntegral len
+          [ classifyPercent range $ fromIntegral len
           ]
         label "length" [classifyRangeBy 16 $ length xs]
         F.assert $
@@ -290,3 +287,24 @@ checkFromArrayHomomorphism name g =
 
 distribUr :: (Ur a, Ur b) %1 -> Ur (a, b)
 distribUr (Ur l, Ur r) = Ur (l, r)
+
+test_serialAccess :: TestTree
+test_serialAccess =
+  testGroup
+    "Serial Updates has the same meaning with vectors"
+    [ testProperty "Int" $
+        checkSerialUpdateSemantics
+          (F.int $ F.between (-10, 10))
+          LUV.fromListL
+          LUV.freeze
+    , testProperty "Bool" $
+        checkSerialUpdateSemantics
+          (F.bool True)
+          LUV.fromListL
+          LUV.freeze
+    , testProperty "Double" $
+        checkSerialUpdateSemantics
+          (doubleG 8)
+          LUV.fromListL
+          LUV.freeze
+    ]

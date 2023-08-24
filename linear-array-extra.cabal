@@ -89,6 +89,7 @@ test-suite linear-array-extra-test
   build-depends:
       base >=4.7 && <5
     , falsify
+    , foldl
     , linear-array-extra
     , linear-base
     , linear-generics

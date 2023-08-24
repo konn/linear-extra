@@ -64,6 +64,7 @@ tests:
     dependencies:
     - linear-array-extra
     - falsify
+    - foldl
     - linear-base
     - tasty
     - tasty-hunit
