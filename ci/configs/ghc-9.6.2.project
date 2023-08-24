@@ -5,7 +5,7 @@
 -- Please place this file next to your .cabal file as cabal.config
 -- To only use tested packages, uncomment the following line:
 -- remote-repo: stackage-nightly-2023-08-24:http://www.stackage.org/nightly-2023-08-24
-import: cabal.project
+import: ../../cabal.project
 with-compiler: ghc-9.6.2
 index-state: hackage.haskell.org 2023-08-24T00:43:23Z
 constraints: abstract-deque ==0.3,
