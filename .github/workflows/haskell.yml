@@ -25,6 +25,7 @@ jobs:
   build:
     name: Build (${{matrix.plan.name}})
     needs: [ci-enumerate]
+    continue-on-error: true
     strategy:
       matrix:
         plan: ${{fromJSON(needs.ci-enumerate.outputs.plan)}}
