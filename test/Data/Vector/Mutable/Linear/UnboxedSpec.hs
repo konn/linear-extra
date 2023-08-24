@@ -13,6 +13,7 @@ module Data.Vector.Mutable.Linear.UnboxedSpec (
   test_serialAccess,
   test_push,
   test_pop,
+  test_mapMaybe,
 ) where
 
 import Data.Alloc.Linearly.Token (linearly)
@@ -319,6 +320,48 @@ test_pop =
                     )
                )
     ]
+
+test_mapMaybe :: TestTree
+test_mapMaybe =
+  testGroup
+    "mapMaybe"
+    [ testGroup
+        "freeze . mapMaybe f = U.mapMaybe"
+        [ testWithGens "-> Int" $ checkMapMaybe $ F.int $ F.withOrigin (-10, 10) 0
+        , testWithGens "-> Bool" $ checkMapMaybe $ F.bool True
+        , testWithGens "-> Double" $ checkMapMaybe $ doubleG 8
+        ]
+    ]
+
+checkMapMaybe ::
+  ( F.Function a
+  , U.Unbox a
+  , Show a
+  , Show b
+  , Eq b
+  , U.Unbox b
+  ) =>
+  Gen b ->
+  Gen a ->
+  Property' String ()
+checkMapMaybe tgt g = do
+  (len, xs) <- genLenList g
+  F.Fn f <-
+    F.gen $
+      F.fun $
+        pure Nothing `F.choose` (Just <$> tgt)
+  let resl = U.mapMaybe f $ U.fromList xs
+  label
+    "% length of reduced vector"
+    [classifyPercent (U.length resl) $ fromIntegral len]
+  F.assert $
+    P.expect resl
+      .$ ( "actual"
+         , unur PL.$
+            linearly \l ->
+              LUV.freeze PL.$
+                LUV.mapMaybe (LUV.fromListL l xs) f
+         )
 
 checkPushSnoc :: (Eq a, Show a, U.Unbox a) => Gen a -> Property' String ()
 checkPushSnoc g = do
