@@ -31,7 +31,8 @@ jobs:
       fail-fast: true
     continue-on-error: true
     env:
-      cabal: 3.10.1.0
+      cabal-version: 3.10.1.0
+      cabal: "cabal --project-file=${{matrix.plan.path}}"
       ghc: ${{matrix.plan.ghc}}
       project-file: ${{matrix.plan.path}}
       plan: ${{matrix.plan.name}}
@@ -85,7 +86,7 @@ jobs:
       uses: haskell/actions/setup@v2
       with:
         enable-stack: false
-        cabal-version: ${{env.cabal}}
+        cabal-version: ${{env.cabal-version}}
         ghc-version: ${{env.ghc}}
     - name: Restore ~/.cabal/store
       uses: actions/cache/restore@v3
@@ -101,11 +102,11 @@ jobs:
         restore-keys: ${{steps.cache-keys.outputs.dist-restore}}
     - name: cabal configure
       run: |
-        cabal v2-configure --enable-tests --enable-benchmarks --enable-optimisation=2
-        cabal update
+        ${{env.cabal}} v2-configure --enable-tests --enable-benchmarks --enable-optimisation=2
+        ${{env.cabal}} update
     - name: Build Dependencies
       run: | 
-        cabal build --only-dependencies
+        ${{env.cabal}} build --only-dependencies
     - name: Save ~/.cabal/store Cache
       uses: actions/cache/save@v3
       with:
@@ -113,7 +114,7 @@ jobs:
         key: ${{steps.cache-keys.outputs.store}}
     - name: Build All
       run: | 
-        cabal build
+        ${{env.cabal}} build
     - name: Save dist-newstyle Cache
       uses: actions/cache/save@v3
       with:
