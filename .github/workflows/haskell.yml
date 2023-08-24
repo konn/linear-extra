@@ -9,7 +9,7 @@ jobs:
     name: Enumerate GHC Versions
     runs-on: ubuntu-latest
     outputs:
-      plan: ${{steps.list-ci.outputs.plans}}
+      plan: ${{steps.list-ci.outputs.plan}}
     steps:
     - uses: actions/checkout@v3
       with:

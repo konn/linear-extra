@@ -11,5 +11,6 @@ module.exports = async ({ github, context, core, glob, io, require }) => {
 
     return { path, name, ghc };
   });
+  core.core.info(`plan: ${JSON.stringify(plans)}`);
   core.setOutput("plan", JSON.stringify(plans));
 };
