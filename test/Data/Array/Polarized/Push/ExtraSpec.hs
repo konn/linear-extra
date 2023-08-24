@@ -44,7 +44,7 @@ test_alloc =
         , testWithGens "Unboxed Vector" $ checkAllocMake @U.Vector
         ]
     , testGroup
-        "Push.alloc ((cons|snoc)* mempty) = id"
+        "Push.alloc ((cons|snoc)* mempty)"
         [ testWithGens "Boxed Vector" $ checkConsSnocEmpty @V.Vector
         , testWithGens "Unboxed Vector" $ checkConsSnocEmpty @U.Vector
         ]
