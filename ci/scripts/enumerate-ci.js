@@ -4,8 +4,9 @@ module.exports = async ({ github, context, core, glob, io, require }) => {
   const files = await globber.glob();
   const plans = files.map((path) => {
     const name = path.replaceAll(/.+\/|\.project$/g, "");
-    const src = fs.readFileSync(path);
-    const match = src.match(/with-compiler:\s*ghc-([\d\.]+)/);
+    const match = fs
+      .readFileSync(path, "utf-8")
+      .match(/with-compiler:\s*ghc-([\d\.]+)/);
     const ghc = match[1];
 
     return { path, name, ghc };
