@@ -5,11 +5,33 @@ on:
 
 
 jobs:
+  ci-enumerate:
+    name: Enumerate GHC Versions
+    runs-on: ubuntu-latest
+    outputs:
+      plan: ${{steps.list-ci.outputs.plans}}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{github.event.pull_request.head.sha || github.sha}}
+    - name: Enumerate CI plans
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const script = require('./ci/scripts/enumerate-ci.js')
+          await script({github, context, core, glob, io, require})
+
   build:
+    name: Build (${{matrix.plan.name}})
+    needs: [ci-enumerate]
+    strategy:
+      matrix:
+        plan: ${{fromJSON(needs.ci-enumerate.outputs.plan)}}
     env:
-      ghc: 9.0.2
       cabal: 3.10.1.0
-    name: Build
+      ghc: ${{matrix.plan.ghc}}
+      project-file: ${{matrix.plan.path}}
+      plan: ${{matrix.plan.name}}
     runs-on: ubuntu-latest
     outputs:
       benchmarks: ${{steps.list-bins.outputs.benchs}}
@@ -41,13 +63,13 @@ jobs:
           const source_hash = await glob.hashFiles('**/*.hs', '**/*.lhs', '**/*.hsig', '**/*.hs-boot', '**/*.c', '**/*.h', '**/*.chs', '**/*.hsc')
           core.setOutput('source', source_hash)
 
-          const store_prefix = "store-${{runner.os}}-${{env.ghc}}"
+          const store_prefix = "store-${{runner.os}}-${{env.plan}}"
           core.setOutput("store-prefix", store_prefix)
           const store_keys = build_keys([store_prefix, project_hash, package_hash])
           core.setOutput("store", store_keys.key)
           core.setOutput("store-restore", store_keys.restore)
 
-          const dist_prefix = "dist-${{runner.os}}-${{env.ghc}}"
+          const dist_prefix = "dist-${{runner.os}}-${{env.plan}}"
           core.setOutput("dist-prefix", dist_prefix)
           const dist_key_comps = [
             dist_prefix, project_hash, package_hash, source_hash
@@ -97,7 +119,7 @@ jobs:
 
     - name: Collect binaries
       continue-on-error: true
-      run: ./ci/collect-bins.sh artifacts
+      run: ./ci/scripts/collect-bins.sh artifacts
     - name: Upload Aritracts
       uses: actions/upload-artifact@v3
       with:
@@ -111,12 +133,17 @@ jobs:
         echo "tests=$(jq -cMnR '[inputs]' <artifacts/tests.list)" >>"${GITHUB_OUTPUT}"
 
   test:
-    name: Test
-    needs: [build]
+    name: Test (${{matrix.plan.name}})
+    needs: [ci-enumerate, build]
     continue-on-error: true
+    strategy:
+      matrix:
+        plan: ${{fromJSON(needs.ci-enumerate.outputs.plan)}}
     env:
-      ghc: 9.0.2
       cabal: 3.10.1.0
+      ghc: ${{matrix.plan.ghc}}
+      project-file: ${{matrix.plan.path}}
+      plan: ${{matrix.plan.name}}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
