@@ -3,7 +3,7 @@ module.exports = async ({ github, context, core, glob, io, require }) => {
   const globber = await glob.create("ci/configs/*.project");
   const files = await globber.glob();
   const plans = files.map((fullpath) => {
-    const path = fullpath.replace(/^.+\//, "ci/configs");
+    const path = fullpath.replace(/^.+\//, "ci/configs/");
     const name = fullpath.replaceAll(/.+\/|\.project$/g, "");
     const match = fs
       .readFileSync(fullpath, "utf-8")
