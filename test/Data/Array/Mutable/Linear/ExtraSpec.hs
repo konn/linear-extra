@@ -25,39 +25,31 @@ test_allocL :: TestTree
 test_allocL =
   testGroup
     "allocL"
-    [ testGroup
+    [ testWithGens
         "linearly (\\l -> freeze (allocL l n x)) = alloc n x freeze"
-        [ testProperty "Int" do
-            len <- gen $ F.int (F.between (0, 128))
-            x <- gen $ F.int (F.withOrigin (-10, 10) 0)
-            label "length" [classifyRangeBy 16 len]
-            F.assert $
-              P.eq
-                .$ ("alloc", unur (LA.alloc len x LA.freeze))
-                .$ ("allocL", unur (linearly \l -> LA.freeze (LA.allocL l len x)))
-        ]
+        $ \g -> do
+          len <- gen $ F.int (F.between (0, 128))
+          x <- gen g
+          label "length" [classifyRangeBy 16 len]
+          F.assert $
+            P.eq
+              .$ ("alloc", unur (LA.alloc len x LA.freeze))
+              .$ ("allocL", unur (linearly \l -> LA.freeze (LA.allocL l len x)))
     ]
 
 test_fromListL :: TestTree
 test_fromListL =
   testGroup
     "fromListL"
-    [ testGroup
+    [ testWithGens
         "unur (linearly \\l -> freeze (fromListL l xs)) = U.fromList xs"
-        [ testProperty "Int" do
-            xs <- gen $ F.list (F.between (0, 128)) (F.int (F.withOrigin (-10, 10) 0))
-            label "length" [classifyRangeBy 16 $ length xs]
-            F.assert $
-              P.eq
-                .$ ("alloc", unur (linearly \l -> LA.freeze PL.$ LA.fromListL l xs))
-                .$ ("replicate", V.fromList xs)
-        , testProperty "Bool" do
-            xs <- gen $ F.list (F.between (0, 128)) (F.bool True)
-            label "length" [classifyRangeBy 16 $ length xs]
-            F.assert $
-              P.expect (V.fromList xs)
-                .$ ("alloc", unur (linearly \l -> LA.freeze PL.$ LA.fromListL l xs))
-        ]
+        \g -> do
+          xs <- gen $ F.list (F.between (0, 128)) g
+          label "length" [classifyRangeBy 16 $ length xs]
+          F.assert $
+            P.eq
+              .$ ("alloc", unur (linearly \l -> LA.freeze PL.$ LA.fromListL l xs))
+              .$ ("replicate", V.fromList xs)
     ]
 
 test_serialAccess :: TestTree

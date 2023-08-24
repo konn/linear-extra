@@ -11,6 +11,7 @@ module Data.Vector.Mutable.Linear.UnboxedSpec (
   test_emptyL,
   test_fromArray,
   test_serialAccess,
+  test_push,
 ) where
 
 import Data.Alloc.Linearly.Token (linearly)
@@ -20,7 +21,6 @@ import Data.Unrestricted.Linear (unur)
 import qualified Data.Vector.Mutable.Linear.Unboxed as LUV
 import qualified Data.Vector.Unboxed as U
 import Linear.Array.Extra.TestUtils
-import Prelude.Linear (Ur (..))
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F
 import Test.Falsify.Predicate ((.$))
@@ -35,34 +35,32 @@ test_constantL :: TestTree
 test_constantL =
   testGroup
     "constantL"
-    [ testGroup
+    [ testWithGens
         "linearly (\\l -> freeze (constantL l n x)) = constant n x freeze"
-        [ testProperty "Int" do
-            len <- gen $ F.int (F.between (0, 128))
-            x <- gen $ F.int (F.withOrigin (-10, 10) 0)
-            label "length" [classifyRangeBy 16 len]
-            F.assert $
-              P.eq
-                .$ ("constant", unur (LUV.constant len x LUV.freeze))
-                .$ ("constantL", unur (linearly \l -> LUV.freeze (LUV.constantL l len x)))
-        ]
+        \g -> do
+          len <- gen $ F.int (F.between (0, 128))
+          x <- gen g
+          label "length" [classifyRangeBy 16 len]
+          F.assert $
+            P.eq
+              .$ ("constant", unur (LUV.constant len x LUV.freeze))
+              .$ ("constantL", unur (linearly \l -> LUV.freeze (LUV.constantL l len x)))
     ]
 
 test_constant :: TestTree
 test_constant =
   testGroup
     "constant"
-    [ testGroup
+    [ testWithGens
         "unur (constant n x freeze) = U.replicate n x"
-        [ testProperty "Int" do
-            len <- gen $ F.int (F.between (0, 128))
-            x <- gen $ F.int (F.withOrigin (-10, 10) 0)
-            label "length" [classifyRangeBy 16 len]
-            F.assert $
-              P.expect
-                (U.replicate len x)
-                .$ ("constant", unur (LUV.constant len x LUV.freeze))
-        ]
+        \g -> do
+          len <- gen $ F.int (F.between (0, 128))
+          x <- gen g
+          label "length" [classifyRangeBy 16 len]
+          F.assert $
+            P.expect
+              (U.replicate len x)
+              .$ ("constant", unur (LUV.constant len x LUV.freeze))
     ]
 
 test_emptyL :: TestTree
@@ -102,40 +100,23 @@ test_fromListL :: TestTree
 test_fromListL =
   testGroup
     "fromListL"
-    [ testGroup
+    [ testWithGens
         "unur (linearly \\l -> freeze (fromListL l xs)) = U.fromList xs"
-        [ testProperty "Int" do
-            xs <- gen $ F.list (F.between (0, 128)) (F.int (F.withOrigin (-10, 10) 0))
-            label "length" [classifyRangeBy 16 $ length xs]
-            F.assert $
-              P.eq
-                .$ ("fromListL", unur (linearly \l -> LUV.freeze PL.$ LUV.fromListL l xs))
-                .$ ("fromList", U.fromList xs)
-        , testProperty "Bool" do
-            xs <- gen $ F.list (F.between (0, 128)) (F.bool True)
-            label "length" [classifyRangeBy 16 $ length xs]
-            F.assert $
-              P.expect (U.fromList xs)
-                .$ ("fromListL", unur (linearly \l -> LUV.freeze PL.$ LUV.fromListL l xs))
-        , testProperty "Double" do
-            xs <- gen $ F.list (F.between (0, 128)) (doubleG 8)
-            label "length" [classifyRangeBy 16 $ length xs]
-            F.assert $
-              P.expect (U.fromList xs)
-                .$ ("fromListL", unur (linearly \l -> LUV.freeze PL.$ LUV.fromListL l xs))
-        ]
+        \g -> do
+          (_len, xs) <- genLenList g
+          F.assert $
+            P.eq
+              .$ ("fromListL", unur (linearly \l -> LUV.freeze PL.$ LUV.fromListL l xs))
+              .$ ("fromList", U.fromList xs)
     ]
 
 test_fromList :: TestTree
 test_fromList =
   testGroup
     "fromList"
-    [ testGroup
+    [ testWithGens
         "unur (fromList xs freeze)) = U.fromList xs"
-        [ testProperty "Int" $ checkFromList $ F.int (F.withOrigin (-10, 10) 0)
-        , testProperty "Bool" $ checkFromList $ F.bool True
-        , testProperty "Double" $ checkFromList $ doubleG 8
-        ]
+        checkFromList
     ]
 
 checkFromList :: (Show a, Eq a, U.Unbox a) => Gen a -> Property ()
@@ -152,141 +133,128 @@ test_fromArray =
     "fromArray"
     [ testGroup
         "is an array-homomorphism"
-        [ checkFromArrayHomomorphism "Int" $ F.int $ F.between (-10, 10)
-        , checkFromArrayHomomorphism "Bool" $ F.bool True
-        , checkFromArrayHomomorphism "Double" $ F.bool True
-        ]
-    ]
-
-checkFromArrayHomomorphism ::
-  (Show a, Eq a, U.Unbox a, F.Function a) => String -> Gen a -> TestTree
-checkFromArrayHomomorphism name g =
-  testGroup
-    name
-    [ testProperty "freeze (set i x (fromArray xs)) = freeze (set i x xs)" do
-        len <- F.gen $ F.integral $ F.between (1, 128)
-        i <- F.gen $ F.int $ F.between (0, fromIntegral len - 1)
-        x <- F.gen g
-        xs <- F.gen $ F.list (F.between (len, len)) g
-        label "length" [classifyRangeBy 16 $ length xs]
-        collect "x == xs[i]" [show $ x == xs !! i]
-        F.assert $
-          P.eq
-            .$ ( "array"
-               , unur PL.$ linearly \l ->
-                  LUA.freeze PL.$ LUA.set i x PL.$ LUA.fromListL l xs
-               )
-            .$ ( "vector"
-               , unur PL.$ linearly \l ->
-                  LUV.freeze PL.$ LUV.set i x PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
-               )
-    , testProperty "freeze <$> get i (fromArray xs) = freeze <$> get i xs" do
-        len <- F.gen $ F.integral $ F.between (1, 128)
-        i <- F.gen $ F.int $ F.between (0, fromIntegral len - 1)
-        xs <- F.gen $ F.list (F.between (len, len)) g
-        label "length" [classifyRangeBy 16 $ length xs]
-        F.assert $
-          P.eq
-            .$ ( "array"
-               , unur PL.$ linearly \l ->
-                  distribUr PL.$ D.fmap LUA.freeze PL.$ LUA.get i PL.$ LUA.fromListL l xs
-               )
-            .$ ( "vector"
-               , unur PL.$ linearly \l ->
-                  distribUr PL.$ D.fmap LUV.freeze PL.$ LUV.get i PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
-               )
-    , testProperty "freeze <$> size (fromArray xs) = freeze <$> size xs" do
-        len <- F.gen $ F.integral $ F.between (1, 128)
-        xs <- F.gen $ F.list (F.between (len, len)) g
-        label "length" [classifyRangeBy 16 $ length xs]
-        F.assert $
-          P.eq
-            .$ ( "array"
-               , unur PL.$ linearly \l ->
-                  distribUr PL.$ D.fmap LUA.freeze PL.$ LUA.size PL.$ LUA.fromListL l xs
-               )
-            .$ ( "vector"
-               , unur PL.$ linearly \l ->
-                  distribUr PL.$ D.fmap LUV.freeze PL.$ LUV.size PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
-               )
-    , testProperty "freeze (slice off ran (fromArray xs)) = freeze (snd' (unsafeSlice off ran xs))" do
-        len <- F.gen $ F.integral $ F.between (0, 128)
-        xs <- F.gen $ F.list (F.between (len, len)) g
-        start <- F.gen $ F.int $ F.between (0, fromIntegral len)
-        label
-          "start %"
-          [ classifyPercent start $ fromIntegral len
-          ]
-        range <- F.gen $ F.int $ F.between (0, fromIntegral len - start)
-        label
-          "range %"
-          [ classifyPercent range $ fromIntegral len
-          ]
-        label "length" [classifyRangeBy 16 $ length xs]
-        F.assert $
-          P.eq
-            .$ ( "array"
-               , unur PL.$ linearly \l ->
-                  LUA.freeze PL.$ snd' PL.$ LUA.unsafeSlice start range PL.$ LUA.fromListL l xs
-               )
-            .$ ( "vector"
-               , unur PL.$ linearly \l ->
-                  LUV.freeze PL.$ LUV.slice start range PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
-               )
-    , testGroup
-        "freeze (map f (fromArray xs)) = freeze (map f xs)"
-        [ testProperty "-> Int" do
-            len <- F.gen $ F.integral $ F.between (0, 128)
+        [ testWithGens "freeze (set i x (fromArray xs)) = freeze (set i x xs)" \g -> do
+            len <- F.gen $ F.integral $ F.between (1, 128)
+            i <- F.gen $ F.int $ F.between (0, fromIntegral len - 1)
+            x <- F.gen g
             xs <- F.gen $ F.list (F.between (len, len)) g
-            Fn f <- F.gen $ F.fun $ F.int (F.between (-10, 10))
+            label "length" [classifyRangeBy 16 $ length xs]
+            collect "x == xs[i]" [show $ x == xs !! i]
+            F.assert $
+              P.eq
+                .$ ( "array"
+                   , unur PL.$ linearly \l ->
+                      LUA.freeze PL.$ LUA.set i x PL.$ LUA.fromListL l xs
+                   )
+                .$ ( "vector"
+                   , unur PL.$ linearly \l ->
+                      LUV.freeze PL.$ LUV.set i x PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                   )
+        , testWithGens "freeze <$> get i (fromArray xs) = freeze <$> get i xs" \g -> do
+            len <- F.gen $ F.integral $ F.between (1, 128)
+            i <- F.gen $ F.int $ F.between (0, fromIntegral len - 1)
+            xs <- F.gen $ F.list (F.between (len, len)) g
             label "length" [classifyRangeBy 16 $ length xs]
             F.assert $
               P.eq
                 .$ ( "array"
                    , unur PL.$ linearly \l ->
-                      LUA.freeze PL.$ LUA.map f PL.$ LUA.fromListL l xs
+                      distribUr PL.$ D.fmap LUA.freeze PL.$ LUA.get i PL.$ LUA.fromListL l xs
                    )
                 .$ ( "vector"
                    , unur PL.$ linearly \l ->
-                      LUV.freeze PL.$ PL.flip LUV.map f PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                      distribUr PL.$ D.fmap LUV.freeze PL.$ LUV.get i PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
                    )
-        , testProperty "-> Bool" do
-            len <- F.gen $ F.integral $ F.between (0, 128)
+        , testWithGens "freeze <$> size (fromArray xs) = freeze <$> size xs" \g -> do
+            len <- F.gen $ F.integral $ F.between (1, 128)
             xs <- F.gen $ F.list (F.between (len, len)) g
-            Fn f <- F.gen $ F.fun $ F.bool True
             label "length" [classifyRangeBy 16 $ length xs]
             F.assert $
               P.eq
                 .$ ( "array"
                    , unur PL.$ linearly \l ->
-                      LUA.freeze PL.$ LUA.map f PL.$ LUA.fromListL l xs
+                      distribUr PL.$ D.fmap LUA.freeze PL.$ LUA.size PL.$ LUA.fromListL l xs
                    )
                 .$ ( "vector"
                    , unur PL.$ linearly \l ->
-                      LUV.freeze PL.$ PL.flip LUV.map f PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                      distribUr PL.$ D.fmap LUV.freeze PL.$ LUV.size PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
                    )
+        , testWithGens "freeze (slice off ran (fromArray xs)) = freeze (snd' (unsafeSlice off ran xs))" \g -> do
+            len <- F.gen $ F.integral $ F.between (0, 128)
+            xs <- F.gen $ F.list (F.between (len, len)) g
+            start <- F.gen $ F.int $ F.between (0, fromIntegral len)
+            label
+              "start %"
+              [ classifyPercent start $ fromIntegral len
+              ]
+            range <- F.gen $ F.int $ F.between (0, fromIntegral len - start)
+            label
+              "range %"
+              [ classifyPercent range $ fromIntegral len
+              ]
+            label "length" [classifyRangeBy 16 $ length xs]
+            F.assert $
+              P.eq
+                .$ ( "array"
+                   , unur PL.$ linearly \l ->
+                      LUA.freeze PL.$ snd' PL.$ LUA.unsafeSlice start range PL.$ LUA.fromListL l xs
+                   )
+                .$ ( "vector"
+                   , unur PL.$ linearly \l ->
+                      LUV.freeze PL.$ LUV.slice start range PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                   )
+        , testGroup
+            "freeze (map f (fromArray xs)) = freeze (map f xs)"
+            [ testWithGens "-> Int" \g -> do
+                len <- F.gen $ F.integral $ F.between (0, 128)
+                xs <- F.gen $ F.list (F.between (len, len)) g
+                Fn f <- F.gen $ F.fun $ F.int (F.between (-10, 10))
+                label "length" [classifyRangeBy 16 $ length xs]
+                F.assert $
+                  P.eq
+                    .$ ( "array"
+                       , unur PL.$ linearly \l ->
+                          LUA.freeze PL.$ LUA.map f PL.$ LUA.fromListL l xs
+                       )
+                    .$ ( "vector"
+                       , unur PL.$ linearly \l ->
+                          LUV.freeze PL.$ PL.flip LUV.map f PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                       )
+            , testWithGens "-> Bool" \g -> do
+                len <- F.gen $ F.integral $ F.between (0, 128)
+                xs <- F.gen $ F.list (F.between (len, len)) g
+                Fn f <- F.gen $ F.fun $ F.bool True
+                label "length" [classifyRangeBy 16 $ length xs]
+                F.assert $
+                  P.eq
+                    .$ ( "array"
+                       , unur PL.$ linearly \l ->
+                          LUA.freeze PL.$ LUA.map f PL.$ LUA.fromListL l xs
+                       )
+                    .$ ( "vector"
+                       , unur PL.$ linearly \l ->
+                          LUV.freeze PL.$ PL.flip LUV.map f PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                       )
+            ]
+        , testWithGens
+            "freeze (mapSame f (fromArray xs)) = freeze (mapSame f xs)"
+            \g -> do
+              len <- F.gen $ F.integral $ F.between (0, 128)
+              xs <- F.gen $ F.list (F.between (len, len)) g
+              Fn f <- F.gen $ F.fun g
+              label "length" [classifyRangeBy 16 $ length xs]
+              F.assert $
+                P.eq
+                  .$ ( "array"
+                     , unur PL.$ linearly \l ->
+                        LUA.freeze PL.$ LUA.mapSame f PL.$ LUA.fromListL l xs
+                     )
+                  .$ ( "vector"
+                     , unur PL.$ linearly \l ->
+                        LUV.freeze PL.$ PL.flip LUV.mapSame f PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                     )
         ]
-    , testProperty
-        "freeze (mapSame f (fromArray xs)) = freeze (mapSame f xs)"
-        do
-          len <- F.gen $ F.integral $ F.between (0, 128)
-          xs <- F.gen $ F.list (F.between (len, len)) g
-          Fn f <- F.gen $ F.fun g
-          label "length" [classifyRangeBy 16 $ length xs]
-          F.assert $
-            P.eq
-              .$ ( "array"
-                 , unur PL.$ linearly \l ->
-                    LUA.freeze PL.$ LUA.mapSame f PL.$ LUA.fromListL l xs
-                 )
-              .$ ( "vector"
-                 , unur PL.$ linearly \l ->
-                    LUV.freeze PL.$ PL.flip LUV.mapSame f PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
-                 )
     ]
-
-distribUr :: (Ur a, Ur b) %1 -> Ur (a, b)
-distribUr (Ur l, Ur r) = Ur (l, r)
 
 test_serialAccess :: TestTree
 test_serialAccess =
@@ -308,3 +276,36 @@ test_serialAccess =
           LUV.fromListL
           LUV.freeze
     ]
+
+test_push :: TestTree
+test_push =
+  testGroup
+    "push"
+    [ testWithGens "freeze . push = snoc" checkPushSnoc
+    , testWithGens "freeze (pop (push x xs)) = (Just x, xs)" \g -> do
+        (_len, xs) <- genLenList g
+        x <- F.gen g
+        F.assert $
+          P.expect (Just x, U.fromList xs)
+            .$ ( "actual"
+               , unur PL.$ linearly \l ->
+                  distribUr
+                    ( LUV.freeze
+                        D.<$> LUV.pop (LUV.push x (LUV.fromListL l xs))
+                    )
+               )
+    ]
+
+checkPushSnoc :: (Eq a, Show a, U.Unbox a) => Gen a -> Property' String ()
+checkPushSnoc g = do
+  (_l, xs) <- genLenList g
+  x <- F.gen g
+  F.assert $
+    P.expect (U.fromList xs `U.snoc` x)
+      .$ ( "actual"
+         , unur PL.$
+            linearly \l ->
+              LUV.freeze PL.$
+                LUV.push x PL.$
+                  LUV.fromListL l xs
+         )

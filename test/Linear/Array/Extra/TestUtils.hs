@@ -5,6 +5,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE LinearTypes #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 
 module Linear.Array.Extra.TestUtils (
@@ -19,6 +20,9 @@ module Linear.Array.Extra.TestUtils (
   applyArrayOpsL,
   checkSerialUpdateSemantics,
   classifyPercent,
+  testWithGens,
+  genLenList,
+  distribUr,
 ) where
 
 import qualified Control.Foldl as Foldl
@@ -43,10 +47,11 @@ import qualified Test.Falsify.Generator as F
 import Test.Falsify.Predicate ((.$))
 import qualified Test.Falsify.Predicate as P
 import qualified Test.Falsify.Range as F
+import Test.Tasty (TestTree, testGroup)
 import qualified Test.Tasty.Falsify as F
 import qualified Unsafe.Linear as Unsafe
 
-classifyRangeBy :: Int -> Int -> String
+classifyRangeBy :: (Show i, Integral i) => i -> i -> String
 classifyRangeBy _ 0 = "0"
 classifyRangeBy q n =
   let nDiv = (n - 1) `quot` q
@@ -152,7 +157,7 @@ checkSerialUpdateSemantics ::
   F.Property ()
 checkSerialUpdateSemantics g fromLst frz = do
   len <- F.gen $ F.integral $ F.between (1, 10)
-  F.label "length" [classifyRangeBy 16 $ fromIntegral len]
+  F.label "length" [classifyRangeBy 16 len]
   xs <- F.gen $ F.list (F.between (len, len)) g
   upds <- F.gen $ F.list (F.between (0, 50)) $ arrayOpG len g
   let (opCount, numSet, numGet, numMap, numMod, numInsts, collide) =
@@ -199,6 +204,28 @@ classifyOp = \case
   Map {} -> 2
   Modify {} -> 3
 
-classifyPercent :: (Integral i) => i -> i -> String
+classifyPercent :: (Show i, Integral i) => i -> i -> String
 classifyPercent _ 0 = "-"
-classifyPercent i j = classifyRangeBy 10 $ fromIntegral $ 100 * i `quot` j
+classifyPercent i j = classifyRangeBy 10 $ 100 * i `quot` j
+
+testWithGens ::
+  String ->
+  (forall a. (Show a, Eq a, F.Function a, U.Unbox a) => F.Gen a -> F.Property ()) ->
+  TestTree
+testWithGens l p =
+  testGroup
+    l
+    [ F.testProperty "Int" $ p $ F.int $ F.withOrigin (-10, 10) 0
+    , F.testProperty "Bool" $ p $ F.bool True
+    , F.testProperty "Double" $ p $ doubleG 8
+    ]
+
+genLenList :: Show a => F.Gen a -> F.Property' e (Word, [a])
+genLenList g = do
+  len <- F.gen $ F.integral (F.between (0, 128))
+  F.label "length" [classifyRangeBy 16 len]
+  xs <- F.gen $ F.list (F.between (len, len)) g
+  pure (len, xs)
+
+distribUr :: (Ur a, Ur b) %1 -> Ur (a, b)
+distribUr (Ur l, Ur r) = Ur (l, r)
