@@ -151,6 +151,7 @@ jobs:
       ghc: ${{matrix.plan.ghc}}
       project-file: ${{matrix.plan.path}}
       plan: ${{matrix.plan.name}}
+      artifact: ${{needs.build.outputs.artifact}}
     runs-on: ubuntu-latest
     steps:
       - if: ${{needs.build.result != 'success' }}
@@ -162,7 +163,7 @@ jobs:
         id: download
         uses: actions/download-artifact@v3
       - name: Decompress
-        run: tar xaf ${{needs.build.outputs.artifact}}/${{needs.build.outputs.artifact}}.tar.zst
+        run: tar xaf ${{env.artifact}}/${{env.artifact}}.tar.zst
       - name: Run Tests
         shell: bash
         run: |
@@ -175,7 +176,7 @@ jobs:
             echo "--------"
             echo "Running: ${TEST}"
             set +e
-            ./artifacts/tests/"${TEST}"
+            ${{env.artifact}}/tests/"${TEST}"
             RESL=$?
             set -e
             if [ ${RESL} -eq 0 ]; then
@@ -185,7 +186,7 @@ jobs:
               FAIL=$((FAIL + 1))
               echo 'Result: FAILED!'
             fi
-          done <./artifacts/tests.list
+          done <${{env.artifact}}/tests.list
 
           echo ""
           echo "----"
