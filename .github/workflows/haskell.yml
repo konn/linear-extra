@@ -28,7 +28,7 @@ jobs:
     strategy:
       matrix:
         plan: ${{fromJSON(needs.ci-enumerate.outputs.plan)}}
-      fail-fast: true
+      fail-fast: false
     env:
       cabal-version: 3.10.1.0
       cabal: "cabal --project-file=${{matrix.plan.path}}"
