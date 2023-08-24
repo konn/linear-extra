@@ -36,10 +36,12 @@ jobs:
       ghc: ${{matrix.plan.ghc}}
       project-file: ${{matrix.plan.path}}
       plan: ${{matrix.plan.name}}
+      artifact-name: "artifact-${{matrix.plan.name}}"
     runs-on: ubuntu-latest
     outputs:
       benchmarks: ${{steps.list-bins.outputs.benchs}}
       tests: ${{steps.list-bins.outputs.tests}}
+      artifact: "artifact-${{matrix.plan.name}}"
     steps:
     - uses: actions/checkout@v3
       with:
@@ -123,18 +125,19 @@ jobs:
 
     - name: Collect binaries
       continue-on-error: true
-      run: ./ci/scripts/collect-bins.sh artifacts
+      run: ./ci/scripts/collect-bins.sh "${{env.artifact-name}}"
     - name: Upload Aritracts
       uses: actions/upload-artifact@v3
       with:
-        path: artifacts.tar.zst
-        name: artifacts
+        path: ${{env.artifact-name}}.tar.zst
+        name: ${{env.artifact-name}}
+        retention-days: 1
     - name: List Binaries
       id: list-bins
       shell: bash
       run: |
-        echo "benchs=$(jq -cMnR '[inputs]' <artifacts/benchs.list)" >>"${GITHUB_OUTPUT}"
-        echo "tests=$(jq -cMnR '[inputs]' <artifacts/tests.list)" >>"${GITHUB_OUTPUT}"
+        echo "benchs=$(jq -cMnR '[inputs]' <"${{env.artifact-name}}"/benchs.list)" >>"${GITHUB_OUTPUT}"
+        echo "tests=$(jq -cMnR '[inputs]' <"${{env.artifact-name}}"/tests.list)" >>"${GITHUB_OUTPUT}"
 
   test:
     name: Test (${{matrix.plan.name}})
@@ -159,7 +162,7 @@ jobs:
         id: download
         uses: actions/download-artifact@v3
       - name: Decompress
-        run: tar xaf artifacts/artifacts.tar.zst
+        run: tar xaf ${{needs.build.outputs.artifact}}/${{needs.build.outputs.artifact}}.tar.zst
       - name: Run Tests
         shell: bash
         run: |
