@@ -5,6 +5,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE LinearTypes #-}
+{-# LANGUAGE TupleSections #-}
 
 module Linear.Array.Extra.TestUtils (
   classifyRangeBy,
@@ -24,6 +25,7 @@ import qualified Control.Foldl as Foldl
 import Data.Alloc.Linearly.Token (Linearly, linearly)
 import qualified Data.Array.Mutable.Linear.Extra as LA
 import qualified Data.Array.Mutable.Linear.Unboxed as LUA
+import qualified Data.Foldable as F
 import Data.Functor ((<&>))
 import Data.List (foldl')
 import qualified Data.List.Linear as L
@@ -149,29 +151,28 @@ checkSerialUpdateSemantics ::
   (x %1 -> Ur (v a)) ->
   F.Property ()
 checkSerialUpdateSemantics g fromLst frz = do
-  len <- F.gen $ F.integral $ F.between (1, 128)
+  len <- F.gen $ F.integral $ F.between (1, 10)
   F.label "length" [classifyRangeBy 16 $ fromIntegral len]
   xs <- F.gen $ F.list (F.between (len, len)) g
-  upds <- F.gen $ F.list (F.between (0, 20)) $ arrayOpG len g
-  let (opCount, numSet, numGet, numMap, numMod, numInsts) =
+  upds <- F.gen $ F.list (F.between (0, 50)) $ arrayOpG len g
+  let (opCount, numSet, numGet, numMap, numMod, numInsts, collide) =
         Foldl.fold
-          ( (,,,,,)
+          ( (,,,,,,)
               <$> Foldl.length
               <*> Foldl.prefilter (\case Set {} -> True; _ -> False) Foldl.length
               <*> Foldl.prefilter (\case Get {} -> True; _ -> False) Foldl.length
               <*> Foldl.prefilter (\case Map {} -> True; _ -> False) Foldl.length
               <*> Foldl.prefilter (\case Modify {} -> True; _ -> False) Foldl.length
-              <*> Foldl.premap
-                ( \case
-                    Set {} -> 0 :: Int
-                    Get {} -> 1
-                    Map {} -> 2
-                    Modify {} -> 3
-                )
-                (length <$> Foldl.set)
+              <*> Foldl.premap classifyOp (length <$> Foldl.set)
+              <*> ( length . filter (> 1) . F.toList
+                      <$> Foldl.premap
+                        (fmap (,()) <$> opIndex)
+                        (Foldl.handles Foldl.folded $ Foldl.foldByKeyMap Foldl.length)
+                  )
           )
           upds
-  F.label "# of updates" [classifyRangeBy 10 opCount]
+  F.label "# of updates" [classifyRangeBy 5 opCount]
+  F.label "# of index collision" [classifyRangeBy 1 collide]
   F.label "# of distinct ops" [show numInsts]
   F.label "% sets" [classifyPercent numSet opCount]
   F.label "% get" [classifyPercent numGet opCount]
@@ -183,6 +184,20 @@ checkSerialUpdateSemantics g fromLst frz = do
          , unur PL.$ linearly \l ->
             frz (applyArrayOpsL upds (fromLst l xs))
          )
+
+opIndex :: ArrayOp a -> Maybe Int
+opIndex = \case
+  Set i _ -> pure i
+  Get i -> pure i
+  Map {} -> Nothing
+  Modify i _ -> pure i
+
+classifyOp :: ArrayOp a -> Int
+classifyOp = \case
+  Set {} -> 0 :: Int
+  Get {} -> 1
+  Map {} -> 2
+  Modify {} -> 3
 
 classifyPercent :: (Integral i) => i -> i -> String
 classifyPercent _ 0 = "-"
