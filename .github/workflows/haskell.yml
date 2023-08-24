@@ -154,7 +154,8 @@ jobs:
       artifact: ${{needs.build.outputs.artifact}}
     runs-on: ubuntu-latest
     steps:
-      - if: ${{needs.build.result != 'success' }}
+      - name: Faile when Corresponding Build wouldn't succeeded
+        if: ${{needs.build.result != 'success' }}
         run: echo "BUILD FAILED" >&2; xit 1
       - uses: actions/checkout@v3
         with:
