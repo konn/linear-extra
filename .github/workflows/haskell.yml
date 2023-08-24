@@ -1,0 +1,161 @@
+name: Build and Test
+on: 
+  push: {branches: ["main"]}
+  pull_request:
+
+jobs:
+  build:
+    env:
+      ghc: 9.4.5
+      cabal: 3.10.1.0
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      benchmarks: ${{steps.list-bins.outputs.benchs}}
+      tests: ${{steps.list-bins.outputs.tests}}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{github.event.pull_request.head.sha || github.sha}}
+    - name: Calculate hash keys
+      uses: actions/github-script@v6
+      id: cache-keys
+      with:
+        script: |
+          function build_keys(comps) {
+            const fallbacks = comps.reduce(
+              (accum, cur) => 
+                  [accum[0].concat([cur])].concat(accum),
+              [[]]
+            ).slice(1,-1).map(e => e.concat("").join('-'))
+
+            return {key: comps.join("-"), restore: fallbacks.join("\n")}
+          }
+          const project_hash = await glob.hashFiles('cabal.project', 'cabal.project.freeze')
+          core.setOutput('project', project_hash)
+
+          const package_hash = await glob.hashFiles('**/package.yaml', '**/*.cabal')
+          core.setOutput('package', package_hash)
+
+          const source_hash = await glob.hashFiles('**/*.hs', '**/*.lhs', '**/*.hsig', '**/*.hs-boot', '**/*.c', '**/*.h', '**/*.chs', '**/*.hsc')
+          core.setOutput('source', source_hash)
+
+          const store_prefix = "store-${{runner.os}}-${{env.ghc}}"
+          core.setOutput("store-prefix", store_prefix)
+          const store_keys = build_keys([store_prefix, project_hash, package_hash])
+          core.setOutput("store", store_keys.key)
+          core.setOutput("store-restore", store_keys.restore)
+
+          const dist_prefix = "dist-${{runner.os}}-${{env.ghc}}"
+          core.setOutput("dist-prefix", dist_prefix)
+          const dist_key_comps = [
+            dist_prefix, project_hash, package_hash, source_hash
+          ]
+          const dist_keys = build_keys(dist_key_comps)
+          core.setOutput('dist', dist_keys.key)
+          core.setOutput('dist-restore', dist_keys.restore)
+
+    - name: Setup Haskell
+      uses: haskell/actions/setup@v2
+      with:
+        enable-stack: false
+        cabal-version: ${{env.cabal}}
+        ghc-version: ${{env.ghc}}
+    - name: Restore ~/.cabal/store
+      uses: actions/cache/restore@v3
+      with:
+        path: ~/.cabal/store
+        key: ${{steps.cache-keys.outputs.store}}
+        restore-keys: ${{steps.cache-keys.outputs.store-restore}}
+    - name: Restore dist-newstyle
+      uses: actions/cache/restore@v3
+      with:
+        path: dist-newstyle
+        key: ${{steps.cache-keys.outputs.dist}}
+        restore-keys: ${{steps.cache-keys.outputs.dist-restore}}
+    - name: cabal configure
+      run: |
+        cabal v2-configure --enable-tests --enable-benchmarks --enable-optimisation=2
+        cabal update
+    - name: Build Dependencies
+      run: | 
+        cabal build --only-dependencies
+    - name: Save ~/.cabal/store Cache
+      uses: actions/cache/save@v3
+      with:
+        path: ~/.cabal/store
+        key: ${{steps.cache-keys.outputs.store}}
+    - name: Build All
+      run: | 
+        cabal build
+    - name: Save dist-newstyle Cache
+      uses: actions/cache/save@v3
+      with:
+        path: dist-newstyle
+        key: ${{steps.cache-keys.outputs.dist}}
+
+    - name: Collect binaries
+      continue-on-error: true
+      run: ./ci/collect-bins.sh artifacts
+    - name: Upload Aritracts
+      uses: actions/upload-artifact@v3
+      with:
+        path: artifacts.tar.zst
+        name: artifacts
+    - name: List Binaries
+      id: list-bins
+      shell: bash
+      run: |
+        echo "benchs=$(jq -cMnR '[inputs]' <artifacts/benchs.list)" >>"${GITHUB_OUTPUT}"
+        echo "tests=$(jq -cMnR '[inputs]' <artifacts/tests.list)" >>"${GITHUB_OUTPUT}"
+
+  test:
+    name: Test
+    needs: [build]
+    continue-on-error: true
+    env:
+      ghc: 9.4.5
+      cabal: 3.10.1.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{github.event.pull_request.head.sha || github.sha}}
+      - name: Download artifacts
+        id: download
+        uses: actions/download-artifact@v3
+      - name: Decompress
+        run: tar xaf artifacts/artifacts.tar.zst
+      - name: Run Tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          TOTAL=0
+          SUCCESS=0
+          FAIL=0
+          while read -r TEST; do
+            TOTAL=$((TOTAL + 1))
+            echo "--------"
+            echo "Running: ${TEST}"
+            set +e
+            ./artifacts/tests/"${TEST}"
+            RESL=$?
+            set -e
+            if [ ${RESL} -eq 0 ]; then
+              SUCCESS=$((SUCCESS + 1))
+              echo "Result: Successed"
+            else
+              FAIL=$((FAIL + 1))
+              echo 'Result: FAILED!'
+            fi
+          done <./artifacts/tests.list
+
+          echo ""
+          echo "----"
+
+          if [ "${FAIL}" -eq 0 ]; then
+            echo "All ${TOTAL} tests passed."
+          else
+            echo "${FAIL} out of ${TOTAL} tests FAILED"'!'
+            exit 1
+          fi

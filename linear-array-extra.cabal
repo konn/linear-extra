@@ -77,6 +77,8 @@ test-suite linear-array-extra-test
   other-modules:
       Data.Array.Mutable.Linear.ExtraSpec
       Data.Array.Mutable.Linear.UnboxedSpec
+      Data.Vector.Mutable.Linear.ExtraSpec
+      Linear.Array.Extra.TestUtils
       Paths_linear_array_extra
   hs-source-dirs:
       test
