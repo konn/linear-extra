@@ -35,6 +35,8 @@ module Data.Vector.Mutable.Linear.Unboxed (
   pop,
   shrinkToFit,
   mapMaybe,
+  map,
+  mapSame,
   filter,
   slice,
   toList,
@@ -50,7 +52,7 @@ import qualified Data.Bifunctor.Linear as BiL
 import qualified Data.Unrestricted.Linear as Ur
 import qualified Data.Vector.Unboxed as U
 import GHC.Stack (HasCallStack)
-import Prelude.Linear hiding (filter, mapMaybe)
+import Prelude.Linear hiding (filter, map, mapMaybe)
 import qualified Prelude as P
 
 data Vector a where
@@ -267,6 +269,64 @@ mapMaybe (src :: Vector a) (f :: a -> Maybe b) =
                   go (r + 1) (w + 1) s src (Array.unsafeSet w b dst)
               | otherwise ->
                   go (r + 1) w s src dst
+
+{- | 'fmap', but unboxed.
+
+NOTE: Contrary to the Boxed case, we MUST NOT reuse original array
+because the sizes / alignments can differ across element types.
+-}
+map ::
+  (U.Unbox a, U.Unbox b) =>
+  Vector a %1 ->
+  (a -> b) ->
+  Vector b
+{-# INLINE [1] map #-}
+map (src :: Vector a) (f :: a -> b) =
+  size src & \(Ur s, Vec n src) ->
+    Array.unsafeAllocBeside n src & \(dst, src) ->
+      go 0 s src dst
+  where
+    go ::
+      Int -> -- cursor
+      Int -> -- total input number
+      UArray a %1 ->
+      UArray b %1 ->
+      Vector b
+    go r s src dst
+      -- If we processed all elements, set the capacity after the last written
+      -- index and coerce the result to the correct type.
+      | r == s = src `lseq` Vec r dst
+      -- Otherwise, read an element, write if the predicate is true and advance
+      -- the write cursor; otherwise keep the write cursor skipping the element.
+      | otherwise =
+          Array.unsafeGet r src & \(Ur a, src) ->
+            go (r + 1) s src (Array.unsafeSet r (f a) dst)
+
+{-# RULES "map/mapSame" map = mapSame #-}
+
+-- | 'map' with the same argument and return type.
+mapSame ::
+  (U.Unbox a) =>
+  Vector a %1 ->
+  (a -> a) ->
+  Vector a
+mapSame (src :: Vector a) (f :: a -> b) =
+  src & \(Vec n src) -> go 0 n src
+  where
+    go ::
+      Int -> -- cursor
+      Int -> -- total input number
+      UArray a %1 ->
+      Vector a
+    go r s src
+      -- If we processed all elements, set the capacity after the last written
+      -- index and coerce the result to the correct type.
+      | r == s = Vec r src
+      -- Otherwise, read an element, write if the predicate is true and advance
+      -- the write cursor; otherwise keep the write cursor skipping the element.
+      | otherwise =
+          Array.unsafeGet r src & \(Ur a, src) ->
+            go (r + 1) s (Array.unsafeSet r (f a) src)
 
 slice :: (HasCallStack, U.Unbox a) => Int -> Int -> Vector a %1 -> Vector a
 slice from newSize (Vec oldSize arr)
