@@ -151,7 +151,7 @@ jobs:
       ghc: ${{matrix.plan.ghc}}
       project-file: ${{matrix.plan.path}}
       plan: ${{matrix.plan.name}}
-      artifact: ${{needs.build.outputs.artifact}}
+      artifact: artifact-${{matrix.plan.name}}
     runs-on: ubuntu-latest
     steps:
       - name: Faile when Corresponding Build wouldn't succeeded
