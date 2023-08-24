@@ -131,8 +131,8 @@ capacity (Vec n arr) =
 
 get :: (HasCallStack, U.Unbox a) => Int -> Vector a %1 -> (Ur a, Vector a)
 get i (Vec n arr)
-  | i < n = arr `lseq` error ("get: out of bound: " <> show (i, n))
-  | otherwise = unsafeGet i (Vec n arr)
+  | i < n = unsafeGet i (Vec n arr)
+  | otherwise = arr `lseq` error ("get: out of bound: " <> show (i, n))
 
 unsafeGet :: U.Unbox a => Int -> Vector a %1 -> (Ur a, Vector a)
 unsafeGet i (Vec n arr) = C.fmap (Vec n) (Array.unsafeGet i arr)
