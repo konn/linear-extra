@@ -1,5 +1,6 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE LinearTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Data.Vector.Mutable.Linear.UnboxedSpec (
@@ -16,6 +17,7 @@ module Data.Vector.Mutable.Linear.UnboxedSpec (
   test_mapMaybe,
   test_filter,
   test_mapSame,
+  test_slice,
 ) where
 
 import Data.Alloc.Linearly.Token (linearly)
@@ -435,3 +437,20 @@ checkPushSnoc g = do
                 LUV.push x PL.$
                   LUV.fromListL l xs
          )
+
+test_slice :: TestTree
+test_slice =
+  testGroup
+    "slice"
+    [ testWithGens "freeze . slice off len xs = slice off len " \g -> do
+        (len, xs) <- genLenList g
+        Slice {..} <- genSlice len
+        let sliced = U.slice offset range $ U.fromList xs
+        F.assert $
+          P.expect sliced
+            .$ ( "actual"
+               , unur PL.$ linearly \l ->
+                  LUV.freeze PL.$
+                    LUV.slice offset range (LUV.fromListL l xs)
+               )
+    ]

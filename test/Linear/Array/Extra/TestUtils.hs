@@ -6,7 +6,9 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Linear.Array.Extra.TestUtils (
   classifyRangeBy,
@@ -23,6 +25,8 @@ module Linear.Array.Extra.TestUtils (
   testWithGens,
   genLenList,
   distribUr,
+  Slice (..),
+  genSlice,
 ) where
 
 import qualified Control.Foldl as Foldl
@@ -229,3 +233,14 @@ genLenList g = do
 
 distribUr :: (Ur a, Ur b) %1 -> Ur (a, b)
 distribUr (Ur l, Ur r) = Ur (l, r)
+
+data Slice = Slice {offset, range :: {-# UNPACK #-} !Int}
+  deriving (Show, Eq, Ord, Generic)
+
+genSlice :: Word -> F.Property Slice
+genSlice (fromIntegral -> len) = do
+  offset <- F.gen $ F.int $ F.between (0, len)
+  F.label "% offset" [classifyPercent offset len]
+  range <- F.gen $ F.int $ F.between (0, len - offset)
+  F.label "% range" [classifyPercent range len]
+  pure Slice {..}

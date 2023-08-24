@@ -1,5 +1,6 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE LinearTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.Array.Mutable.Linear.UnboxedSpec (
@@ -344,23 +345,13 @@ test_unsafeSlice =
 
 checkUnsafeSlice :: (Show a, Eq a, U.Unbox a) => Gen a -> Property ()
 checkUnsafeSlice g = do
-  xs <- gen $ F.list (F.between (0, 128)) g
-  let len = length xs
-  label "length" [classifyRangeBy 16 len]
-  off <- gen $ F.int $ F.between (0, len)
-  label
-    "% offset"
-    [ if len == 0
-        then "N/A"
-        else classifyRangeBy 10 $ 100 * off `quot` len
-    ]
-  ran <- gen $ F.int $ F.between (0, len - off)
-  label "range" [classifyRangeBy 16 ran]
+  (len, xs) <- genLenList g
+  Slice {..} <- genSlice len
   F.assert $
-    P.expect (U.unsafeSlice off ran $ U.fromList xs)
+    P.expect (U.unsafeSlice offset range $ U.fromList xs)
       .$ ( "actual slice"
          , unur PL.$ linearly \l ->
-            LUA.freeze PL.$ snd' PL.$ LUA.unsafeSlice off ran PL.$ LUA.fromListL l xs
+            LUA.freeze PL.$ snd' PL.$ LUA.unsafeSlice offset range PL.$ LUA.fromListL l xs
          )
 
 test_serialAccess :: TestTree
