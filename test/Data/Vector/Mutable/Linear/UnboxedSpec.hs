@@ -14,6 +14,8 @@ module Data.Vector.Mutable.Linear.UnboxedSpec (
   test_push,
   test_pop,
   test_mapMaybe,
+  test_filter,
+  test_mapSame,
 ) where
 
 import Data.Alloc.Linearly.Token (linearly)
@@ -326,12 +328,24 @@ test_mapMaybe =
   testGroup
     "mapMaybe"
     [ testGroup
-        "freeze . mapMaybe f = U.mapMaybe"
+        "freeze . mapMaybe f = U.mapMaybe f"
         [ testWithGens "-> Int" $ checkMapMaybe $ F.int $ F.withOrigin (-10, 10) 0
         , testWithGens "-> Bool" $ checkMapMaybe $ F.bool True
         , testWithGens "-> Double" $ checkMapMaybe $ doubleG 8
         ]
     ]
+
+test_filter :: TestTree
+test_filter =
+  testGroup
+    "filter"
+    [testWithGens "freeze . filter p = U.filter p" checkFilter]
+
+test_mapSame :: TestTree
+test_mapSame =
+  testGroup
+    "mapSame"
+    [testWithGens "freeze . mapSame f = U.map f" checkMapSame]
 
 checkMapMaybe ::
   ( F.Function a
@@ -361,6 +375,51 @@ checkMapMaybe tgt g = do
             linearly \l ->
               LUV.freeze PL.$
                 LUV.mapMaybe (LUV.fromListL l xs) f
+         )
+
+checkFilter ::
+  ( F.Function a
+  , U.Unbox a
+  , Show a
+  , Eq a
+  ) =>
+  Gen a ->
+  Property' String ()
+checkFilter g = do
+  (len, xs) <- genLenList g
+  F.Fn p <- F.gen $ F.fun $ F.bool False
+  let resl = U.filter p $ U.fromList xs
+  label
+    "% length of reduced vector"
+    [classifyPercent (U.length resl) $ fromIntegral len]
+  F.assert $
+    P.expect resl
+      .$ ( "actual"
+         , unur PL.$
+            linearly \l ->
+              LUV.freeze PL.$
+                LUV.filter (LUV.fromListL l xs) p
+         )
+
+checkMapSame ::
+  ( F.Function a
+  , U.Unbox a
+  , Show a
+  , Eq a
+  ) =>
+  Gen a ->
+  Property' String ()
+checkMapSame g = do
+  (_len, xs) <- genLenList g
+  F.Fn f <- F.gen $ F.fun g
+  let resl = U.map f $ U.fromList xs
+  F.assert $
+    P.expect resl
+      .$ ( "actual"
+         , unur PL.$
+            linearly \l ->
+              LUV.freeze PL.$
+                LUV.mapSame (LUV.fromListL l xs) f
          )
 
 checkPushSnoc :: (Eq a, Show a, U.Unbox a) => Gen a -> Property' String ()
