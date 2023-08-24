@@ -78,6 +78,7 @@ test-suite linear-array-extra-test
       Data.Array.Mutable.Linear.ExtraSpec
       Data.Array.Mutable.Linear.UnboxedSpec
       Data.Array.Polarized.Pull.ExtraSpec
+      Data.Array.Polarized.Push.ExtraSpec
       Data.Vector.Mutable.Linear.ExtraSpec
       Data.Vector.Mutable.Linear.UnboxedSpec
       Linear.Array.Extra.TestUtils
@@ -89,6 +90,7 @@ test-suite linear-array-extra-test
       tasty-discover:tasty-discover
   build-depends:
       base >=4.7 && <5
+    , containers
     , dlist
     , falsify
     , foldl
