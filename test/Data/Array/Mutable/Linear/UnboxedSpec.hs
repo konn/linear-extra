@@ -25,6 +25,7 @@ import Data.Maybe
 import Data.Unrestricted.Linear (unur)
 import qualified Data.Unrestricted.Linear as Ur
 import qualified Data.Vector.Unboxed as U
+import Linear.Array.Extra.TestUtils
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F
 import Test.Falsify.Predicate ((.$))
@@ -113,12 +114,6 @@ test_unsafeAllocL =
         ]
     ]
 
-classifyRangeBy :: Int -> Int -> String
-classifyRangeBy _ 0 = "0"
-classifyRangeBy q n =
-  let nDiv = (n - 1) `quot` q
-   in show (nDiv * q + 1, (nDiv + 1) * q)
-
 test_fromList :: TestTree
 test_fromList =
   testGroup
@@ -200,12 +195,6 @@ test_set =
         ]
     ]
 
-fst' :: PL.Consumable b => (a, b) %1 -> a
-fst' = PL.uncurry (PL.flip PL.lseq)
-
-snd' :: PL.Consumable a => (a, b) %1 -> b
-snd' = PL.uncurry PL.lseq
-
 test_fill :: TestTree
 test_fill =
   testGroup
@@ -269,9 +258,6 @@ test_mapSame =
             testMapLikeFor LUA.mapSame (doubleG 8) (doubleG 8)
         ]
     ]
-
-doubleG :: F.Precision -> Gen Double
-doubleG i = F.properFraction i <&> \(F.ProperFraction d) -> d
 
 testMapLikeFor ::
   (Eq b, U.Unbox a, Show a, U.Unbox b, Show b, F.Function a) =>
