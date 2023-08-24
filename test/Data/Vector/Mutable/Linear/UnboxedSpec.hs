@@ -158,7 +158,7 @@ test_fromArray =
     ]
 
 checkFromArrayHomomorphism ::
-  (Show a, Eq a, U.Unbox a) => String -> Gen a -> TestTree
+  (Show a, Eq a, U.Unbox a, F.Function a) => String -> Gen a -> TestTree
 checkFromArrayHomomorphism name g =
   testGroup
     name
@@ -236,6 +236,56 @@ checkFromArrayHomomorphism name g =
                , unur PL.$ linearly \l ->
                   LUV.freeze PL.$ LUV.slice start range PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
                )
+    , testGroup
+        "freeze (map f (fromArray xs)) = freeze (map f xs)"
+        [ testProperty "-> Int" do
+            len <- F.gen $ F.integral $ F.between (0, 128)
+            xs <- F.gen $ F.list (F.between (len, len)) g
+            Fn f <- F.gen $ F.fun $ F.int (F.between (-10, 10))
+            label "length" [classifyRangeBy 16 $ length xs]
+            F.assert $
+              P.eq
+                .$ ( "array"
+                   , unur PL.$ linearly \l ->
+                      LUA.freeze PL.$ LUA.map f PL.$ LUA.fromListL l xs
+                   )
+                .$ ( "vector"
+                   , unur PL.$ linearly \l ->
+                      LUV.freeze PL.$ PL.flip LUV.map f PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                   )
+        , testProperty "-> Bool" do
+            len <- F.gen $ F.integral $ F.between (0, 128)
+            xs <- F.gen $ F.list (F.between (len, len)) g
+            Fn f <- F.gen $ F.fun $ F.bool True
+            label "length" [classifyRangeBy 16 $ length xs]
+            F.assert $
+              P.eq
+                .$ ( "array"
+                   , unur PL.$ linearly \l ->
+                      LUA.freeze PL.$ LUA.map f PL.$ LUA.fromListL l xs
+                   )
+                .$ ( "vector"
+                   , unur PL.$ linearly \l ->
+                      LUV.freeze PL.$ PL.flip LUV.map f PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                   )
+        ]
+    , testProperty
+        "freeze (mapSame f (fromArray xs)) = freeze (mapSame f xs)"
+        do
+          len <- F.gen $ F.integral $ F.between (0, 128)
+          xs <- F.gen $ F.list (F.between (len, len)) g
+          Fn f <- F.gen $ F.fun g
+          label "length" [classifyRangeBy 16 $ length xs]
+          F.assert $
+            P.eq
+              .$ ( "array"
+                 , unur PL.$ linearly \l ->
+                    LUA.freeze PL.$ LUA.mapSame f PL.$ LUA.fromListL l xs
+                 )
+              .$ ( "vector"
+                 , unur PL.$ linearly \l ->
+                    LUV.freeze PL.$ PL.flip LUV.mapSame f PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                 )
     ]
 
 distribUr :: (Ur a, Ur b) %1 -> Ur (a, b)
