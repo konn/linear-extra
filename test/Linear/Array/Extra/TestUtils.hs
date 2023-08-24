@@ -9,6 +9,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Linear.Array.Extra.TestUtils (
   classifyRangeBy,
@@ -244,3 +245,9 @@ genSlice (fromIntegral -> len) = do
   range <- F.gen $ F.int $ F.between (0, len - offset)
   F.label "% range" [classifyPercent range len]
   pure Slice {..}
+
+instance Semigroup a => PL.Semigroup (Ur a) where
+  Ur a <> Ur b = Ur (a <> b)
+
+instance Monoid a => PL.Monoid (Ur a) where
+  mempty = Ur mempty

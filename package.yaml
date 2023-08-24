@@ -63,6 +63,7 @@ tests:
     - tasty-discover
     dependencies:
     - linear-array-extra
+    - dlist
     - falsify
     - foldl
     - linear-base
