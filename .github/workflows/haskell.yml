@@ -28,6 +28,8 @@ jobs:
     strategy:
       matrix:
         plan: ${{fromJSON(needs.ci-enumerate.outputs.plan)}}
+      fail-fast: true
+    continue-on-error: true
     env:
       cabal: 3.10.1.0
       ghc: ${{matrix.plan.ghc}}
@@ -140,6 +142,7 @@ jobs:
     strategy:
       matrix:
         plan: ${{fromJSON(needs.ci-enumerate.outputs.plan)}}
+      fail-fast: false
     env:
       cabal: 3.10.1.0
       ghc: ${{matrix.plan.ghc}}
