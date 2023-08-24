@@ -3099,4 +3099,4 @@ constraints: abstract-deque ==0.3,
              zxcvbn-hs ==0.3.5
 
 allow-newer:
-  tasty:optparse-applicative
+  falsify:optparse-applicative
