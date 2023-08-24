@@ -12,6 +12,7 @@ module Data.Vector.Mutable.Linear.UnboxedSpec (
   test_fromArray,
   test_serialAccess,
   test_push,
+  test_pop,
 ) where
 
 import Data.Alloc.Linearly.Token (linearly)
@@ -292,6 +293,29 @@ test_push =
                   distribUr
                     ( LUV.freeze
                         D.<$> LUV.pop (LUV.push x (LUV.fromListL l xs))
+                    )
+               )
+    ]
+
+test_pop :: TestTree
+test_pop =
+  testGroup
+    "push"
+    [ testWithGens "pop = unsnoc" checkPushSnoc
+    , testWithGens "freeze (pop (push x xs)) = (Just x, xs)" \g -> do
+        (_len, xs) <- genLenList g
+        let uv = U.fromList xs
+        F.assert $
+          P.expect
+            ( case U.unsnoc uv of
+                Just (xs', x) -> (Just x, xs')
+                Nothing -> (Nothing, uv)
+            )
+            .$ ( "actual"
+               , unur PL.$ linearly \l ->
+                  distribUr
+                    ( LUV.freeze
+                        D.<$> LUV.pop (LUV.fromListL l xs)
                     )
                )
     ]
