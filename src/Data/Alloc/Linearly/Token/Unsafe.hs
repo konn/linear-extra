@@ -16,13 +16,12 @@ import qualified Data.HashMap.Mutable.Linear as LHM
 import qualified Data.Set.Mutable.Linear as LSet
 import Data.Unrestricted.Linear (dup2)
 import qualified Data.Vector.Mutable.Linear as MV
-import GHC.Base (noinline)
 import qualified Unsafe.Linear as Unsafe
 
 class HasLinearWitness a where
   linearWitness_ :: a %1 -> (a, Linearly)
   {-# NOINLINE linearWitness_ #-}
-  linearWitness_ = noinline (Unsafe.toLinear (,Linearly))
+  linearWitness_ = Unsafe.toLinear (,Linearly)
 
 linearWitness :: HasLinearWitness a => a %1 -> (a, Linearly)
 {-# NOINLINE linearWitness #-}
