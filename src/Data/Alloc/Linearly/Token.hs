@@ -22,6 +22,7 @@ import Data.Unrestricted.Linear
 import Prelude.Linear ((&))
 
 linearly :: (Linearly %1 -> Ur a) %1 -> Ur a
+{-# NOINLINE linearly #-}
 linearly k = k Linearly
 
 besides :: HasLinearWitness a => a %1 -> (Linearly %1 -> b) %1 -> (b, a)

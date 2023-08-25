@@ -23,6 +23,7 @@ class HasLinearWitness a where
   linearWitness_ = Unsafe.toLinear (,Linearly)
 
 linearWitness :: HasLinearWitness a => a %1 -> (a, Linearly)
+{-# NOINLINE linearWitness #-}
 linearWitness = linearWitness_
 
 instance HasLinearWitness Linearly where
