@@ -26,6 +26,7 @@ linearly :: (Linearly %1 -> Ur a) %1 -> Ur a
 linearly k = k Linearly
 
 besides :: HasLinearWitness a => a %1 -> (Linearly %1 -> b) %1 -> (b, a)
+{-# NOINLINE besides #-}
 besides wit f =
   linearWitness wit & \(wit, lin) ->
     (f lin, wit)
