@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -16,11 +17,13 @@ import qualified Data.HashMap.Mutable.Linear as LHM
 import qualified Data.Set.Mutable.Linear as LSet
 import Data.Unrestricted.Linear (dup2)
 import qualified Data.Vector.Mutable.Linear as MV
+import Prelude.Linear ((.))
 import qualified Unsafe.Linear as Unsafe
 
 class HasLinearWitness a where
   linearWitness_ :: a %1 -> (a, Linearly)
-  linearWitness_ = Unsafe.toLinear (,Linearly)
+  {-# NOINLINE linearWitness_ #-}
+  linearWitness_ = unsafeLinearly . (,)
 
 linearWitness :: HasLinearWitness a => a %1 -> (a, Linearly)
 {-# NOINLINE linearWitness #-}
