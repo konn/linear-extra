@@ -94,7 +94,7 @@ assertIndexInRange i arr =
   size arr & \(Ur s, arr') ->
     if 0 <= i && i < s
       then arr'
-      else error "Array: index out of bounds" arr'
+      else error ("Unboxed Array: index out of bounds " <> show (i, s)) arr'
 
 size :: U.Unbox a => UArray a %1 -> (Ur Int, UArray a)
 size = Unsafe.toLinear \(UArray mu) ->

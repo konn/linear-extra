@@ -174,7 +174,7 @@ assertIndexInRange i arr =
   size arr & \(Ur s, arr') ->
     if 0 <= i && i < s
       then arr'
-      else arr' `lseq` error "Array: index out of bounds"
+      else arr' `lseq` error ("Array: index out of bounds " <> show (i, s))
 
 {- | Sets the value of an index. The index should be less than the arrays
 size, otherwise this errors.
