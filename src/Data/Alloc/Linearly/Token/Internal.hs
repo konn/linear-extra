@@ -30,13 +30,15 @@ seed :: MutablePrimArray RealWorld Int
 {-# NOINLINE seed #-}
 seed = unsafePerformIO do
   pa <- newPinnedPrimArray 0
-  writePrimArray pa 0 42
+  writePrimArray pa 0 1
   P.pure pa
 
 unsafeLinearly :: (Linearly %1 -> a) %1 -> a
 {-# NOINLINE unsafeLinearly #-}
 unsafeLinearly k = case runRW# P.$ unIO $ readPrimArray seed 0 of
-  (# _, i #) -> k (Linearly i)
+  (# s, i #) ->
+    case unIO (writePrimArray seed 0 (1 - i)) s of
+      (# _, () #) -> k (Linearly i)
 
 deriveGeneric ''Linearly
 
