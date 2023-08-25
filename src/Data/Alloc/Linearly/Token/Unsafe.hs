@@ -20,6 +20,7 @@ import qualified Unsafe.Linear as Unsafe
 
 class HasLinearWitness a where
   linearWitness_ :: a %1 -> (a, Linearly)
+  {-# NOINLINE linearWitness_ #-}
   linearWitness_ = Unsafe.toLinear (,Linearly)
 
 linearWitness :: HasLinearWitness a => a %1 -> (a, Linearly)
