@@ -19,7 +19,6 @@ module Data.Alloc.Linearly.Token (Linearly (), linearly, besides) where
 import Data.Alloc.Linearly.Token.Internal
 import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness, linearWitness)
 import Data.Unrestricted.Linear
-import GHC.Base (noinline)
 import Prelude.Linear ((&))
 
 linearly :: (Linearly %1 -> Ur a) %1 -> Ur a
@@ -27,9 +26,6 @@ linearly :: (Linearly %1 -> Ur a) %1 -> Ur a
 linearly k = k Linearly
 
 besides :: HasLinearWitness a => a %1 -> (Linearly %1 -> b) %1 -> (b, a)
--- NOTE: For some (unclear) reasons, those NOINLINE/noinlibe are needed
--- to prevent the internal state float out when called more than twice
-{-# NOINLINE besides #-}
 besides wit f =
-  noinline linearWitness wit & \(wit, lin) ->
+  linearWitness wit & \(wit, lin) ->
     (f lin, wit)
