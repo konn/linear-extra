@@ -57,24 +57,29 @@ newtype UArray a = UArray (U.Vector a)
   deriving anyclass (HasLinearWitness)
 
 alloc :: (HasCallStack, U.Unbox a) => Int -> a -> (UArray a %1 -> Ur b) %1 -> Ur b
+{-# NOINLINE alloc #-}
 alloc n x f
   | n < 0 = error ("UArray.alloc: Negative length: " <> show n) f
   | otherwise = f (UArray $ U.replicate n x)
 
 allocL :: (HasCallStack, U.Unbox a) => Linearly %1 -> Int -> a -> UArray a
+{-# NOINLINE allocL #-}
 allocL l n x
   | n < 0 = error ("UArray.alloc: Negative length: " <> show n) l
   | otherwise =
       consume l & \() -> UArray (U.replicate n x)
 
 unsafeAlloc :: U.Unbox a => Int -> (UArray a %1 -> Ur b) %1 -> Ur b
+{-# NOINLINE unsafeAlloc #-}
 unsafeAlloc n (f :: UArray a %1 -> b) =
   f $ UArray $ runST (U.unsafeFreeze P.=<< MU.unsafeNew n)
 
 unsafeAllocL :: U.Unbox a => Linearly %1 -> Int -> UArray a
+{-# NOINLINE unsafeAllocL #-}
 unsafeAllocL l n = l `lseq` UArray (runST (U.unsafeFreeze P.=<< MU.unsafeNew n))
 
 unsafeAllocBeside :: U.Unbox a => Int -> UArray b %1 -> (UArray a, UArray b)
+{-# NOINLINE unsafeAllocBeside #-}
 unsafeAllocBeside n (UArray orig) =
   (UArray $ runST (U.unsafeFreeze P.=<< MU.unsafeNew n), UArray orig)
 
@@ -100,6 +105,7 @@ set i x arr =
   unsafeSet i x (assertIndexInRange i arr)
 
 unsafeSet :: U.Unbox a => Int -> a -> UArray a %1 -> UArray a
+{-# NOINLINE unsafeSet #-}
 unsafeSet i a = Unsafe.toLinear \arr0@(UArray arr) -> runST do
   mu <- U.unsafeThaw arr
   MU.write mu i a
@@ -109,6 +115,7 @@ get :: (HasCallStack, U.Unbox a) => Int -> UArray a %1 -> (Ur a, UArray a)
 get i arr = unsafeGet i (assertIndexInRange i arr)
 
 unsafeGet :: U.Unbox a => Int -> UArray a %1 -> (Ur a, UArray a)
+{-# NOINLINE unsafeGet #-}
 unsafeGet i = Unsafe.toLinear \(UArray mu) ->
   (Ur (U.unsafeIndex mu i), UArray mu)
 
