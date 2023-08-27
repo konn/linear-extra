@@ -26,7 +26,10 @@ module Data.Vector.Mutable.Linear.Unboxed (
   fromListL,
   fromVectorL,
   size,
+  slice,
+  unsafeSlice,
   slice',
+  unsafeSlice',
   capacity,
   set,
   unsafeSet,
@@ -42,7 +45,6 @@ module Data.Vector.Mutable.Linear.Unboxed (
   map,
   mapSame,
   filter,
-  slice,
   toList,
   freeze,
   appendVector,
@@ -359,20 +361,29 @@ mapSame (src :: Vector a) (f :: a -> b) =
 slice :: (HasCallStack, U.Unbox a) => Int -> Int -> Vector a %1 -> Vector a
 slice from newSize (Vec oldSize arr)
   | oldSize < from + newSize =
-      arr `lseq` error ("Slice index out of bounds: (off, len, orig) = " <> show (from, newSize, oldSize))
-  | from == 0 =
-      Vec newSize arr
+      error ("Slice index out of bounds: (off, len, orig) = " <> show (from, newSize, oldSize)) arr
+  | otherwise = unsafeSlice from newSize (Vec oldSize arr)
+
+unsafeSlice :: U.Unbox a => Int -> Int -> Vector a %1 -> Vector a
+{-# INLINE unsafeSlice #-}
+unsafeSlice from newSize (Vec _ arr)
+  | from == 0 = Vec newSize arr
   | otherwise =
       Array.unsafeSlice from newSize arr & \(oldArr, newArr) ->
         oldArr `lseq` fromArray newArr
 
 -- | Return value is @(orig, slice)@
-slice' :: (HasCallStack, U.Unbox a) => Int -> Int -> Vector a %1 -> (Vector a, Vector a)
+slice' :: U.Unbox a => Int -> Int -> Vector a %1 -> (Vector a, Vector a)
 {-# INLINE slice' #-}
-{-# ANN slice' "HLint: ignore Use bimap" #-}
 slice' from newSize (Vec oldSize arr)
   | oldSize < from + newSize =
       arr `lseq` error ("Slice index out of bounds: (off, len, orig) = " <> show (from, newSize, oldSize))
+  | otherwise = unsafeSlice' from newSize (Vec oldSize arr)
+
+unsafeSlice' :: (U.Unbox a) => Int -> Int -> Vector a %1 -> (Vector a, Vector a)
+{-# INLINE unsafeSlice' #-}
+{-# ANN unsafeSlice' "HLint: ignore Use bimap" #-}
+unsafeSlice' from newSize (Vec oldSize arr)
   | from == 0 =
       dup2 arr & \(arr, arr') ->
         (Vec oldSize arr, Vec newSize arr')
