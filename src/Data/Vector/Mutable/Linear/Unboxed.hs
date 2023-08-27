@@ -177,14 +177,14 @@ This always copies the pushed vector.
 appendVector :: U.Unbox a => U.Vector a -> Vector a %1 -> Vector a
 {-# NOINLINE appendVector #-}
 appendVector news vec =
-  let newLen = U.length news
-   in growToFit newLen vec & Unsafe.toLinear \(Vec s (Array.UArray arr)) ->
+  let growth = U.length news
+   in growToFit growth vec & Unsafe.toLinear \(Vec s (Array.UArray arr)) ->
         case runRW# $
           unIO $
             U.unsafeCopy
-              (MU.unsafeSlice (s - newLen) newLen arr)
+              (MU.unsafeSlice s growth arr)
               news of
-          (# _, () #) -> Vec s (Array.UArray arr)
+          (# _, () #) -> Vec (s + growth) (Array.UArray arr)
 
 {- | Pop from the end of the vector. This will never shrink the vector, use
 'shrinkToFit' to remove the wasted space.
