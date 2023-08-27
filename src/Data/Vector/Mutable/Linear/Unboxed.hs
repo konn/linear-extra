@@ -359,7 +359,7 @@ mapSame (src :: Vector a) (f :: a -> b) =
 slice :: (HasCallStack, U.Unbox a) => Int -> Int -> Vector a %1 -> Vector a
 slice from newSize (Vec oldSize arr)
   | oldSize < from + newSize =
-      arr `lseq` error "Slice index out of bounds"
+      arr `lseq` error ("Slice index out of bounds: (off, len, orig) = " <> show (from, newSize, oldSize))
   | from == 0 =
       Vec newSize arr
   | otherwise =
