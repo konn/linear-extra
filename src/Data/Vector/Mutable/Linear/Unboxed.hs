@@ -372,7 +372,7 @@ slice' :: (HasCallStack, U.Unbox a) => Int -> Int -> Vector a %1 -> (Vector a, V
 {-# ANN slice' "HLint: ignore Use bimap" #-}
 slice' from newSize (Vec oldSize arr)
   | oldSize < from + newSize =
-      arr `lseq` error "Slice index out of bounds"
+      arr `lseq` error ("Slice index out of bounds: (off, len, orig) = " <> show (from, newSize, oldSize))
   | from == 0 =
       dup2 arr & \(arr, arr') ->
         (Vec oldSize arr, Vec newSize arr')
