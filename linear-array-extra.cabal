@@ -34,6 +34,7 @@ library
       Data.Array.Mutable.Linear.Extra
       Data.Array.Mutable.Linear.Primitive
       Data.Array.Mutable.Linear.Unboxed
+      Data.Array.Mutable.Linear.Unboxed.Internal
       Data.Array.Mutable.Unlifted.Linear.Extra
       Data.Array.Mutable.Unlifted.Linear.Primitive
       Data.Array.Polarized.Pull.Extra

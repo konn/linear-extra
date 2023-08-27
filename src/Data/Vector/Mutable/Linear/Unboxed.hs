@@ -7,9 +7,11 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE LinearTypes #-}
+{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -funbox-strict-fields #-}
 
@@ -42,6 +44,7 @@ module Data.Vector.Mutable.Linear.Unboxed (
   slice,
   toList,
   freeze,
+  appendVector,
 ) where
 
 import qualified Control.Functor.Linear as C
@@ -49,11 +52,16 @@ import Data.Alloc.Linearly.Token
 import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness)
 import Data.Array.Mutable.Linear.Unboxed (UArray)
 import qualified Data.Array.Mutable.Linear.Unboxed as Array
+import qualified Data.Array.Mutable.Linear.Unboxed.Internal as Array
 import qualified Data.Bifunctor.Linear as BiL
 import qualified Data.Unrestricted.Linear as Ur
 import qualified Data.Vector.Unboxed as U
+import qualified Data.Vector.Unboxed.Mutable as MU
+import GHC.Exts (runRW#)
+import GHC.IO (unIO)
 import GHC.Stack (HasCallStack)
 import Prelude.Linear hiding (filter, map, mapMaybe)
+import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
 
 data Vector a where
@@ -161,6 +169,21 @@ push :: U.Unbox a => a -> Vector a %1 -> Vector a
 push x vec =
   growToFit 1 vec & \(Vec s arr) ->
     unsafeSet s x (Vec (s + 1) arr)
+
+{- | Push a raw unboxed 'U.Vector' from @vector@ package at the end.
+This always copies the pushed vector.
+-}
+appendVector :: U.Unbox a => U.Vector a -> Vector a %1 -> Vector a
+{-# NOINLINE appendVector #-}
+appendVector news vec =
+  let newLen = U.length news
+   in growToFit newLen vec & Unsafe.toLinear \(Vec s (Array.UArray arr)) ->
+        case runRW# $
+          unIO $
+            U.unsafeCopy
+              (MU.unsafeSlice (s - newLen) newLen arr)
+              news of
+          (# _, () #) -> Vec s (Array.UArray arr)
 
 {- | Pop from the end of the vector. This will never shrink the vector, use
 'shrinkToFit' to remove the wasted space.
