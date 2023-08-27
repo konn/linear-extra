@@ -74,7 +74,7 @@ unsafeAlloc :: U.Unbox a => Int -> (UArray a %1 -> Ur b) %1 -> Ur b
 {-# NOINLINE unsafeAlloc #-}
 unsafeAlloc n (f :: UArray a %1 -> b) =
   case runRW# (unIO $ MU.unsafeNew n) of
-    (# _, mu #) -> f $ UArray mu
+    (# _, mu #) -> f (UArray mu)
 
 unsafeAllocL :: U.Unbox a => Linearly %1 -> Int -> UArray a
 {-# NOINLINE unsafeAllocL #-}
