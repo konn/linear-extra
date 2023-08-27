@@ -26,6 +26,7 @@ module Data.Vector.Mutable.Linear.Unboxed (
   fromListL,
   fromVectorL,
   size,
+  slice',
   capacity,
   set,
   unsafeSet,
@@ -364,6 +365,19 @@ slice from newSize (Vec oldSize arr)
   | otherwise =
       Array.unsafeSlice from newSize arr & \(oldArr, newArr) ->
         oldArr `lseq` fromArray newArr
+
+-- | Return value is @(orig, slice)@
+slice' :: (HasCallStack, U.Unbox a) => Int -> Int -> Vector a %1 -> (Vector a, Vector a)
+{-# INLINE slice' #-}
+slice' from newSize (Vec oldSize arr)
+  | oldSize < from + newSize =
+      arr `lseq` error "Slice index out of bounds"
+  | from == 0 =
+      dup2 arr & \(arr, arr') ->
+        (Vec newSize arr, Vec newSize arr')
+  | otherwise =
+      Array.unsafeSlice from newSize arr & \(oldArr, newArr) ->
+        (Vec oldSize oldArr, fromArray newArr)
 
 instance U.Unbox a => P.Semigroup (Vector a) where
   l <> r = l Prelude.Linear.<> r
