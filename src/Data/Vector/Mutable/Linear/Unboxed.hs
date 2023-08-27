@@ -375,7 +375,7 @@ slice' from newSize (Vec oldSize arr)
       arr `lseq` error "Slice index out of bounds"
   | from == 0 =
       dup2 arr & \(arr, arr') ->
-        (Vec newSize arr, Vec newSize arr')
+        (Vec oldSize arr, Vec newSize arr')
   | otherwise =
       Array.unsafeSlice from newSize arr & \(oldArr, newArr) ->
         (Vec oldSize oldArr, fromArray newArr)
