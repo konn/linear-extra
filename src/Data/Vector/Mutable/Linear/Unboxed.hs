@@ -22,6 +22,7 @@ module Data.Vector.Mutable.Linear.Unboxed (
   fromArray,
   fromList,
   fromListL,
+  fromVectorL,
   size,
   capacity,
   set,
@@ -89,6 +90,9 @@ fromList xs f = Array.fromList xs (f . fromArray)
 -- | Allocator from a list
 fromListL :: (U.Unbox a) => Linearly %1 -> [a] -> Vector a
 fromListL l xs = fromArray $ Array.fromListL l xs
+
+fromVectorL :: (U.Unbox a) => Linearly %1 -> U.Vector a %1 -> Vector a
+fromVectorL l = fromArray . Array.fromVectorL l
 
 fromArray :: U.Unbox a => UArray a %1 -> Vector a
 fromArray arr =

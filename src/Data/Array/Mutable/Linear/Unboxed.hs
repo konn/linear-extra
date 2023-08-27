@@ -25,6 +25,7 @@ module Data.Array.Mutable.Linear.Unboxed (
   unsafeAllocBeside,
   fromList,
   fromListL,
+  fromVectorL,
   fill,
   unsafeSet,
   set,
@@ -171,6 +172,12 @@ fromList (xs :: [a]) f =
     go !_ [] arr = arr
     go !i (x : xs) arr =
       go (i + 1) xs (unsafeSet i x arr)
+
+fromVectorL :: U.Unbox a => Linearly %1 -> U.Vector a %1 -> UArray a
+{-# NOINLINE fromVectorL #-}
+fromVectorL l = Unsafe.toLinear \uv ->
+  case runRW# $ unIO $ U.unsafeThaw uv of
+    (# _, mu #) -> l `lseq` UArray mu
 
 fromListL :: U.Unbox a => Linearly %1 -> [a] -> UArray a
 fromListL l (xs :: [a]) =
