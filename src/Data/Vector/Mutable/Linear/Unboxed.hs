@@ -53,7 +53,9 @@ module Data.Vector.Mutable.Linear.Unboxed (
   freeze,
   appendVector,
   withSlice,
+  withSliceM,
   withUnsafeSlice,
+  withUnsafeSliceM,
   Slice (),
   getS,
   unsafeGetS,
@@ -456,6 +458,18 @@ withUnsafeSlice off ran f = Unsafe.toLinear \(Vec s (Array.UArray mu)) ->
   f (Slice (Array.UArray $ MU.unsafeSlice off ran mu)) & Unsafe.toLinear \(b, _) ->
     (b, Vec s (Array.UArray mu))
 
+withUnsafeSliceM ::
+  (C.Monad m, U.Unbox a) =>
+  Int ->
+  Int ->
+  (forall s. Slice s a %1 -> m (b, Slice s a)) %1 ->
+  Vector a %1 ->
+  m (b, Vector a)
+{-# NOINLINE withUnsafeSliceM #-}
+withUnsafeSliceM off ran f = Unsafe.toLinear \(Vec s (Array.UArray mu)) ->
+  f (Slice (Array.UArray $ MU.unsafeSlice off ran mu)) C.<&> Unsafe.toLinear \(b, _) ->
+    (b, Vec s (Array.UArray mu))
+
 withSlice ::
   (HasCallStack, U.Unbox a) =>
   Int ->
@@ -468,6 +482,19 @@ withSlice off newSize f (Vec oldSize arr)
   | oldSize < off + newSize =
       error ("Slice index out of bounds: (off, len, orig) = " <> show (off, newSize, oldSize)) f arr
   | otherwise = withUnsafeSlice off newSize f (Vec oldSize arr)
+
+withSliceM ::
+  (HasCallStack, C.Monad m, U.Unbox a) =>
+  Int ->
+  Int ->
+  (forall s. Slice s a %1 -> m (b, Slice s a)) %1 ->
+  Vector a %1 ->
+  m (b, Vector a)
+{-# INLINE withSliceM #-}
+withSliceM off newSize f (Vec oldSize arr)
+  | oldSize < off + newSize =
+      error ("Slice index out of bounds: (off, len, orig) = " <> show (off, newSize, oldSize)) f arr
+  | otherwise = withUnsafeSliceM off newSize f (Vec oldSize arr)
 
 cloneS :: forall s a. U.Unbox a => Slice s a %1 -> (Slice s a, UArray a)
 {-# INLINE cloneS #-}
