@@ -9,8 +9,12 @@
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE QualifiedDo #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -funbox-strict-fields #-}
@@ -48,15 +52,30 @@ module Data.Vector.Mutable.Linear.Unboxed (
   toList,
   freeze,
   appendVector,
+  withSlice,
+  withUnsafeSlice,
+  Slice (),
+  getS,
+  unsafeGetS,
+  cloneS,
+  sizeS,
+  foldlSL',
+  foldMapS',
+  foldMapSL',
+  foldS',
+  foldSML',
 ) where
 
 import qualified Control.Functor.Linear as C
+import Control.Monad.Fix (fix)
 import Data.Alloc.Linearly.Token
 import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness)
 import Data.Array.Mutable.Linear.Unboxed (UArray)
 import qualified Data.Array.Mutable.Linear.Unboxed as Array
 import qualified Data.Array.Mutable.Linear.Unboxed.Internal as Array
 import qualified Data.Bifunctor.Linear as BiL
+import Data.Coerce (coerce)
+import Data.Unrestricted.Linear (UrT (..), runUrT)
 import qualified Data.Unrestricted.Linear as Ur
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
@@ -228,9 +247,7 @@ growToFit n vec =
                       -- the if condition
                   )
            in
-            unsafeResize
-              newSize
-              vec''
+            unsafeResize newSize vec''
 
 {- | Resize the vector to a non-negative size. In-range elements are preserved,
 the possible new elements are bottoms.
@@ -421,3 +438,137 @@ toList (Vec n (arr :: arr a)) = go 0 n arr
 -}
 freeze :: U.Unbox a => Vector a %1 -> Ur (U.Vector a)
 freeze (Vec n uv) = Ur.lift (U.unsafeTake n) $ Array.freeze uv
+
+-- | Read-only slice of Unboxed vector
+newtype Slice s a = Slice (UArray a)
+
+withUnsafeSlice ::
+  U.Unbox a =>
+  Int ->
+  Int ->
+  (forall s. Slice s a %1 -> (Ur b, Slice s a)) %1 ->
+  Vector a %1 ->
+  (Ur b, Vector a)
+{-# NOINLINE withUnsafeSlice #-}
+withUnsafeSlice off ran f = Unsafe.toLinear \(Vec s (Array.UArray mu)) ->
+  f (Slice (Array.UArray $ MU.unsafeSlice off ran mu)) & Unsafe.toLinear \(b, _) ->
+    (b, Vec s (Array.UArray mu))
+
+withSlice ::
+  (HasCallStack, U.Unbox a) =>
+  Int ->
+  Int ->
+  (forall s. Slice s a %1 -> (Ur b, Slice s a)) %1 ->
+  Vector a %1 ->
+  (Ur b, Vector a)
+{-# INLINE withSlice #-}
+withSlice off newSize f (Vec oldSize arr)
+  | oldSize < off + newSize =
+      error ("Slice index out of bounds: (off, len, orig) = " <> show (off, newSize, oldSize)) f arr
+  | otherwise = withUnsafeSlice off newSize f (Vec oldSize arr)
+
+cloneS :: forall s a. U.Unbox a => Slice s a %1 -> (Slice s a, UArray a)
+{-# INLINE cloneS #-}
+cloneS = coerce $ dup2 @(UArray a)
+
+unsafeGetS :: forall s a. U.Unbox a => Int -> Slice s a %1 -> (Ur a, Slice s a)
+{-# INLINE unsafeGetS #-}
+unsafeGetS = coerce $ Array.unsafeGet @a
+
+getS :: forall s a. (HasCallStack, U.Unbox a) => Int -> Slice s a %1 -> (Ur a, Slice s a)
+{-# INLINE getS #-}
+getS = coerce $ Array.get @a
+
+sizeS :: forall s a. U.Unbox a => Slice s a %1 -> (Ur Int, Slice s a)
+{-# INLINE sizeS #-}
+sizeS = coerce $ Array.size @a
+
+foldlSL' :: U.Unbox a => (b %1 -> a -> b) -> b %1 -> Slice s a %1 -> (b, Slice s a)
+{-# INLINE foldlSL' #-}
+foldlSL' (f :: b %1 -> a -> b) b slc =
+  sizeS slc & \(Ur n, slc) ->
+    fix
+      ( \go !i !b slc ->
+          i == n & \case
+            True -> (b, slc)
+            False ->
+              unsafeGetS i slc & \(Ur a, slc) ->
+                f b a & \ !b ->
+                  go (i + 1) b slc
+      )
+      0
+      b
+      slc
+
+foldMapS' :: (U.Unbox a, P.Monoid w) => (a -> w) -> Slice s a %1 -> (Ur w, Slice s a)
+{-# INLINE foldMapS' #-}
+foldMapS' f arr =
+  sizeS arr & \(Ur n, arr) ->
+    fix
+      ( \self !i !w !slc ->
+          i == n & \case
+            True -> (Ur w, slc)
+            False ->
+              unsafeGetS i slc & \(Ur a, slc) ->
+                f a & \ !w' ->
+                  (w P.<> w') & \ !w -> self (i + 1) w slc
+      )
+      0
+      P.mempty
+      arr
+
+foldMapSL' :: (U.Unbox a, Monoid w) => (a -> w) -> Slice s a %1 -> (Ur w, Slice s a)
+{-# INLINE foldMapSL' #-}
+foldMapSL' f arr =
+  sizeS arr & \(Ur n, arr) ->
+    fix
+      ( \self !i !w !slc ->
+          i == n & \case
+            True -> (Ur w, slc)
+            False ->
+              unsafeGetS i slc & \(Ur !a, slc) ->
+                f a & \ !w' ->
+                  (w <> w') & \ !w -> self (i + 1) w slc
+      )
+      0
+      mempty
+      arr
+
+-- | For use with 'Control.Foldl.purely'.
+foldS' :: U.Unbox a => (x -> a -> x) -> x -> (x -> b) -> Slice s a %1 -> (Ur b, Slice s a)
+{-# INLINE foldS' #-}
+{- HLINT ignore foldS' "Redundant lambda" -}
+foldS' step ini out = \slc ->
+  sizeS slc & \(Ur n, slc) ->
+    fix
+      ( \self !i !x !slc ->
+          i == n & \case
+            True -> (Ur (out x), slc)
+            False ->
+              unsafeGetS i slc & \(Ur !a, slc) ->
+                step x a & \ !x ->
+                  self (i + 1) x slc
+      )
+      0
+      ini
+      slc
+
+-- | For use with 'Control.Foldl.impurely'.
+foldSML' :: (U.Unbox a, C.Monad m) => (x -> a -> UrT m x) -> UrT m x -> (x -> UrT m b) -> Slice s a %1 -> m (Ur b, Slice s a)
+{-# INLINE foldSML' #-}
+{- HLINT ignore foldSML' "Redundant lambda" -}
+foldSML' step ini out = \slc ->
+  sizeS slc & \(Ur n, slc) -> C.do
+    Ur !x0 <- runUrT ini
+    fix
+      ( \self !i !x !slc ->
+          i == n & \case
+            True -> (,slc) C.<$> runUrT (out x)
+            False ->
+              unsafeGetS i slc & \(Ur !a, slc) -> C.do
+                Ur !x <- runUrT (step x a)
+                self (i + 1) x slc
+      )
+      0
+      x0
+      slc
