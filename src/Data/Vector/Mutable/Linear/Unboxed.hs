@@ -446,9 +446,9 @@ withUnsafeSlice ::
   U.Unbox a =>
   Int ->
   Int ->
-  (forall s. Slice s a %1 -> (Ur b, Slice s a)) %1 ->
+  (forall s. Slice s a %1 -> (b, Slice s a)) %1 ->
   Vector a %1 ->
-  (Ur b, Vector a)
+  (b, Vector a)
 {-# NOINLINE withUnsafeSlice #-}
 withUnsafeSlice off ran f = Unsafe.toLinear \(Vec s (Array.UArray mu)) ->
   f (Slice (Array.UArray $ MU.unsafeSlice off ran mu)) & Unsafe.toLinear \(b, _) ->
@@ -458,9 +458,9 @@ withSlice ::
   (HasCallStack, U.Unbox a) =>
   Int ->
   Int ->
-  (forall s. Slice s a %1 -> (Ur b, Slice s a)) %1 ->
+  (forall s. Slice s a %1 -> (b, Slice s a)) %1 ->
   Vector a %1 ->
-  (Ur b, Vector a)
+  (b, Vector a)
 {-# INLINE withSlice #-}
 withSlice off newSize f (Vec oldSize arr)
   | oldSize < off + newSize =
