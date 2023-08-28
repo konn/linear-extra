@@ -63,7 +63,9 @@ module Data.Vector.Mutable.Linear.Unboxed (
   foldMapS',
   foldMapSL',
   foldS',
+  ifoldS',
   foldSML',
+  ifoldSML',
 ) where
 
 import qualified Control.Functor.Linear as C
@@ -553,6 +555,25 @@ foldS' step ini out = \slc ->
       ini
       slc
 
+-- | For use with 'Control.Foldl.purely'.
+ifoldS' :: U.Unbox a => (x -> (Int, a) -> x) -> x -> (x -> b) -> Slice s a %1 -> (Ur b, Slice s a)
+{-# INLINE ifoldS' #-}
+{- HLINT ignore ifoldS' "Redundant lambda" -}
+ifoldS' step ini out = \slc ->
+  sizeS slc & \(Ur n, slc) ->
+    fix
+      ( \self !i !x !slc ->
+          i == n & \case
+            True -> (Ur (out x), slc)
+            False ->
+              unsafeGetS i slc & \(Ur !a, slc) ->
+                step x (i, a) & \ !x ->
+                  self (i + 1) x slc
+      )
+      0
+      ini
+      slc
+
 -- | For use with 'Control.Foldl.impurely'.
 foldSML' :: (U.Unbox a, C.Monad m) => (x -> a -> UrT m x) -> UrT m x -> (x -> UrT m b) -> Slice s a %1 -> m (Ur b, Slice s a)
 {-# INLINE foldSML' #-}
@@ -567,6 +588,26 @@ foldSML' step ini out = \slc ->
             False ->
               unsafeGetS i slc & \(Ur !a, slc) -> C.do
                 Ur !x <- runUrT (step x a)
+                self (i + 1) x slc
+      )
+      0
+      x0
+      slc
+
+-- | For use with 'Control.Foldl.impurely'.
+ifoldSML' :: (U.Unbox a, C.Monad m) => (x -> (Int, a) -> UrT m x) -> UrT m x -> (x -> UrT m b) -> Slice s a %1 -> m (Ur b, Slice s a)
+{-# INLINE ifoldSML' #-}
+{- HLINT ignore ifoldSML' "Redundant lambda" -}
+ifoldSML' step ini out = \slc ->
+  sizeS slc & \(Ur n, slc) -> C.do
+    Ur !x0 <- runUrT ini
+    fix
+      ( \self !i !x !slc ->
+          i == n & \case
+            True -> (,slc) C.<$> runUrT (out x)
+            False ->
+              unsafeGetS i slc & \(Ur !a, slc) -> C.do
+                Ur !x <- runUrT (step x (i, a))
                 self (i + 1) x slc
       )
       0
