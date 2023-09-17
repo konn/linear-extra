@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -10,7 +11,6 @@
 
 module Data.Alloc.Linearly.Token.Internal (Linearly (..)) where
 
-import Control.Monad (join)
 import Data.Unrestricted.Linear
 import GHC.Generics (Generic)
 import Generics.Linear.TH (deriveGeneric)
@@ -24,8 +24,9 @@ data Linearly = Linearly
 deriveGeneric ''Linearly
 
 instance Consumable Linearly where
-  consume = Unsafe.toLinear (const ())
-  {-# INLINE consume #-}
+  consume = \case Linearly -> ()
+  {-# NOINLINE consume #-}
 
 instance Dupable Linearly where
-  dup2 = Unsafe.toLinear (join (,))
+  dup2 = Unsafe.toLinear (const (Linearly, Linearly))
+  {-# NOINLINE dup2 #-}
