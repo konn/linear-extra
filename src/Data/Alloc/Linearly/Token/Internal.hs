@@ -10,11 +10,12 @@
 
 module Data.Alloc.Linearly.Token.Internal (Linearly (..)) where
 
+import Control.Monad (join)
 import Data.Unrestricted.Linear
 import GHC.Generics (Generic)
 import Generics.Linear.TH (deriveGeneric)
 import Prelude.Linear
-import qualified Prelude.Linear.Generically as L
+import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
 
 data Linearly = Linearly
@@ -22,8 +23,9 @@ data Linearly = Linearly
 
 deriveGeneric ''Linearly
 
-deriving via AsMovable Linearly instance Consumable Linearly
+instance Consumable Linearly where
+  consume = Unsafe.toLinear (const ())
+  {-# INLINE consume #-}
 
-deriving via AsMovable Linearly instance Dupable Linearly
-
-deriving via L.Generically Linearly instance Movable Linearly
+instance Dupable Linearly where
+  dup2 = Unsafe.toLinear (join (,))
