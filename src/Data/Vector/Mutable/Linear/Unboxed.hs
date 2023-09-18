@@ -48,6 +48,8 @@ module Data.Vector.Mutable.Linear.Unboxed (
   mapMaybe,
   map,
   mapSame,
+  imap,
+  imapSame,
   filter,
   toList,
   freeze,
@@ -355,6 +357,40 @@ map (src :: Vector a) (f :: a -> b) =
 
 {-# RULES "map/mapSame" map = mapSame #-}
 
+{- | 'fmapWithIndex', but unboxed.
+
+NOTE: Contrary to the Boxed case, we MUST NOT reuse original array
+because the sizes / alignments can differ across element types.
+-}
+imap ::
+  (U.Unbox a, U.Unbox b) =>
+  Vector a %1 ->
+  (Int -> a -> b) ->
+  Vector b
+{-# INLINE [1] imap #-}
+imap (src :: Vector a) (f :: Int -> a -> b) =
+  size src & \(Ur s, Vec n src) ->
+    Array.unsafeAllocBeside n src & \(dst, src) ->
+      go 0 s src dst
+  where
+    go ::
+      Int -> -- cursor
+      Int -> -- total input number
+      UArray a %1 ->
+      UArray b %1 ->
+      Vector b
+    go r s src dst
+      -- If we processed all elements, set the capacity after the last written
+      -- index and coerce the result to the correct type.
+      | r == s = src `lseq` Vec r dst
+      -- Otherwise, read an element, write if the predicate is true and advance
+      -- the write cursor; otherwise keep the write cursor skipping the element.
+      | otherwise =
+          Array.unsafeGet r src & \(Ur a, src) ->
+            go (r + 1) s src (Array.unsafeSet r (f r a) dst)
+
+{-# RULES "imap/imapSame" imap = imapSame #-}
+
 -- | 'map' with the same argument and return type.
 mapSame ::
   (U.Unbox a) =>
@@ -378,6 +414,30 @@ mapSame (src :: Vector a) (f :: a -> b) =
       | otherwise =
           Array.unsafeGet r src & \(Ur a, src) ->
             go (r + 1) s (Array.unsafeSet r (f a) src)
+
+-- | 'map' with the same argument and return type.
+imapSame ::
+  (U.Unbox a) =>
+  Vector a %1 ->
+  (Int -> a -> a) ->
+  Vector a
+imapSame (src :: Vector a) (f :: Int -> a -> a) =
+  src & \(Vec n src) -> go 0 n src
+  where
+    go ::
+      Int -> -- cursor
+      Int -> -- total input number
+      UArray a %1 ->
+      Vector a
+    go r s src
+      -- If we processed all elements, set the capacity after the last written
+      -- index and coerce the result to the correct type.
+      | r == s = Vec r src
+      -- Otherwise, read an element, write if the predicate is true and advance
+      -- the write cursor; otherwise keep the write cursor skipping the element.
+      | otherwise =
+          Array.unsafeGet r src & \(Ur a, src) ->
+            go (r + 1) s (Array.unsafeSet r (f r a) src)
 
 slice :: (HasCallStack, U.Unbox a) => Int -> Int -> Vector a %1 -> Vector a
 slice from newSize (Vec oldSize arr)
@@ -640,3 +700,29 @@ ifoldSML' step ini out = \slc ->
       0
       x0
       slc
+
+foldSAsideM ::
+  (U.Unbox a, P.Monad m) =>
+  (x -> a -> m x) ->
+  m x ->
+  (x -> m b) ->
+  Slice s a %1 ->
+  (m b, Slice s a)
+{- HLINT ignore foldSMAside "Redundant lambda" -}
+{-# INLINE foldSAsideM #-}
+foldSAsideM step ini out = \slc ->
+  sizeS slc & \(Ur n, slc) ->
+    fix
+      ( \go !i !slc !ma ->
+          if i == n
+            then (out P.=<< ma, slc)
+            else
+              unsafeGetS i slc & \(Ur a, slc) ->
+                go (i + 1) slc do
+                  !x <- ma
+                  !a <- step x a
+                  P.pure a
+      )
+      0
+      slc
+      ini
