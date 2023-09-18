@@ -700,29 +700,3 @@ ifoldSML' step ini out = \slc ->
       0
       x0
       slc
-
-foldSAsideM ::
-  (U.Unbox a, P.Monad m) =>
-  (x -> a -> m x) ->
-  m x ->
-  (x -> m b) ->
-  Slice s a %1 ->
-  (m b, Slice s a)
-{- HLINT ignore foldSMAside "Redundant lambda" -}
-{-# INLINE foldSAsideM #-}
-foldSAsideM step ini out = \slc ->
-  sizeS slc & \(Ur n, slc) ->
-    fix
-      ( \go !i !slc !ma ->
-          if i == n
-            then (out P.=<< ma, slc)
-            else
-              unsafeGetS i slc & \(Ur a, slc) ->
-                go (i + 1) slc do
-                  !x <- ma
-                  !a <- step x a
-                  P.pure a
-      )
-      0
-      slc
-      ini
