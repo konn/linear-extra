@@ -7,6 +7,7 @@
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE UnliftedNewtypes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
@@ -17,6 +18,7 @@ module Data.Ref.Linear.ReferenceCount.ThreadUnsafe (
   Rc (),
   alloc,
   deref,
+  set,
   modify,
   modify_,
   toBox,
@@ -39,10 +41,8 @@ import qualified Data.Replicator.Linear as Rep
 import Data.Word
 import Foreign (free, peek)
 import Foreign.Marshal.Pure (Box, Pool, Representable)
-import qualified Foreign.Marshal.Pure as Box hiding (deconstruct)
+import qualified Foreign.Marshal.Pure.Extra as Box hiding (deconstruct)
 import qualified Foreign.Marshal.Pure.Internal as Box
-import GHC.Exts (runRW#)
-import GHC.IO (unIO)
 import Prelude.Linear
 import System.IO.Unsafe (unsafeDupablePerformIO)
 import qualified Unsafe.Linear as Unsafe
@@ -138,38 +138,30 @@ alloc a0 pool =
       Box.alloc a0 pool & \box ->
         Rc (RcBox (# strong, weak, box #))
 
+set :: Representable a => a -> Rc a %1 -> Rc a
+{-# INLINE set #-}
+set a (Rc (RcBox (# strong, weak, box #))) =
+  Box.set a box & \box ->
+    Rc (RcBox (# strong, weak, box #))
+
 -- | __Warning__: This is non-atomic!
 modify :: Representable a => (a -> (a, b)) -> Rc a %1 -> (Ur b, Rc a)
+{-# INLINE modify #-}
 modify f (Rc (RcBox (# strong, weak, box #))) =
-  modifyBox f box & \(urb, box) ->
+  Box.modify f box & \(urb, box) ->
     (urb, Rc (RcBox (# strong, weak, box #)))
 
 -- | __Warning__: This is non-atomic!
 modify_ :: Representable a => (a -> a) -> Rc a %1 -> Rc a
+{-# INLINE modify_ #-}
 modify_ f (Rc (RcBox (# strong, weak, box #))) =
-  modifyBox_ f box & \box ->
+  Box.modify_ f box & \box ->
     Rc (RcBox (# strong, weak, box #))
-
-modifyBox :: Representable a => (a -> (a, b)) -> Box a %1 -> (Ur b, Box a)
-modifyBox f b =
-  readBox b & \(Ur a, box) ->
-    (a `seq` f a) & \(!a, !b) -> (Ur b, writeBox a box)
-
-modifyBox_ :: Representable a => (a -> a) -> Box a %1 -> Box a
-modifyBox_ f b =
-  readBox b & \(Ur a, box) ->
-    writeBox (a `seq` f a) box
-
-writeBox :: Representable a => a -> Box a %1 -> Box a
-{-# NOINLINE writeBox #-}
-writeBox !a = Unsafe.toLinear \(Box.Box poolPtr ptr) ->
-  case runRW# (unIO (Box.reprPoke ptr a)) of
-    (# _, () #) -> Box.Box poolPtr ptr
 
 deref :: Representable a => Rc a %1 -> (Ur a, Rc a)
 {-# INLINE deref #-}
 deref (Rc (RcBox (# strong, weak, box #))) =
-  readBox box & \(ura, box) ->
+  Box.get box & \(ura, box) ->
     (ura, Rc (RcBox (# strong, weak, box #)))
 
 -- | Tries to deconstruct reference-coutned cell and deallocate heap, if there is only one 'Rc'.
@@ -189,12 +181,6 @@ toBox (Rc (RcBox (# strong, weak, box #)) :: Rc a) =
       decrCounterConsume strong `lseq` decrCounterConsume weak `lseq` Right box
     go (# Ur _, strong #) weak box =
       Left (Rc (RcBox (# strong, weak, box #)))
-
-readBox :: Representable a => Box a %1 -> (Ur a, Box a)
-{-# NOINLINE readBox #-}
-readBox = Unsafe.toLinear \box@(Box.Box _ b) ->
-  case runRW# (unIO (Box.reprPeek b)) of
-    (# _, a #) -> (Ur a, box)
 
 incrStrong :: forall a. RcBox a %1 -> RcBox a
 incrStrong (RcBox (# strong, weak, box #)) = incr (PAU.get 0 strong) weak box
