@@ -16,6 +16,7 @@ import qualified Data.HashMap.Mutable.Linear as LHM
 import qualified Data.Set.Mutable.Linear as LSet
 import Data.Unrestricted.Linear (dup2)
 import qualified Data.Vector.Mutable.Linear as MV
+import Foreign.Marshal.Pure
 
 class HasLinearWitness a where
   linearWitness_ :: a %1 -> (a, Linearly)
@@ -36,3 +37,7 @@ deriving anyclass instance HasLinearWitness (MV.Vector a)
 deriving anyclass instance HasLinearWitness (LHM.HashMap k a)
 
 deriving anyclass instance HasLinearWitness (LSet.Set a)
+
+deriving anyclass instance HasLinearWitness Pool
+
+deriving anyclass instance HasLinearWitness (Box a)

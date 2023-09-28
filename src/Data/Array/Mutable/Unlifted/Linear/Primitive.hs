@@ -54,7 +54,7 @@ unPrimArray# f = Unsafe.toLinear $ \(PrimArray# a) -> Ur (f a)
 lseq :: PrimArray# a %1 -> b %1 -> b
 lseq = Unsafe.toLinear2 \_ b -> b
 
-infix 0 `lseq`
+infixr 0 `lseq`
 
 allocL :: forall a. Prim a => Linearly %1 -> Int -> a -> PrimArray# a
 {-# NOINLINE allocL #-}

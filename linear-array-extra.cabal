@@ -39,6 +39,7 @@ library
       Data.Array.Mutable.Unlifted.Linear.Primitive
       Data.Array.Polarized.Pull.Extra
       Data.Array.Polarized.Push.Extra
+      Data.Ref.Linear.ReferenceCount.ThreadUnsafe
       Data.Unrestricted.Linear.Orphans.Vector
       Data.Vector.Mutable.Linear.Extra
       Data.Vector.Mutable.Linear.Generic
