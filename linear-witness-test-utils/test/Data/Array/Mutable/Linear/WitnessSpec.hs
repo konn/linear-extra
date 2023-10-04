@@ -11,6 +11,7 @@ module Data.Array.Mutable.Linear.WitnessSpec (
 import qualified Data.Array.Mutable.Linear as LA
 import qualified Data.Array.Mutable.Linear.Witness as LA
 import Data.Unrestricted.Linear (unur)
+import qualified Data.Unrestricted.Linear as Ur
 import qualified Data.Vector as V
 import Linear.Witness.Token (linearly)
 import Linear.Witness.Token.TestUtils
@@ -58,9 +59,15 @@ test_doubleAlloc :: TestTree
 test_doubleAlloc =
   testGroup
     "can be allocated inside linearly twice"
-    [ testDoubleAlloc (F.int $ F.between (-10, 10)) LA.fromListL LA.freeze
-    , testDoubleAlloc (F.bool True) LA.fromListL LA.freeze
-    , testDoubleAlloc (doubleG 8) LA.fromListL LA.freeze
+    [ testDoubleAlloc (F.int $ F.between (-10, 10)) (F.int $ F.between (-10, 10)) LA.fromListL LA.fromListL (Ur.lift V.toList PL.. LA.freeze) (Ur.lift V.toList PL.. LA.freeze)
+    , testDoubleAlloc (F.int $ F.between (-10, 10)) (F.bool True) LA.fromListL LA.fromListL (Ur.lift V.toList PL.. LA.freeze) (Ur.lift V.toList PL.. LA.freeze)
+    , testDoubleAlloc (F.int $ F.between (-10, 10)) (doubleG 8) LA.fromListL LA.fromListL (Ur.lift V.toList PL.. LA.freeze) (Ur.lift V.toList PL.. LA.freeze)
+    , testDoubleAlloc (F.bool True) (F.int $ F.between (-10, 10)) LA.fromListL LA.fromListL (Ur.lift V.toList PL.. LA.freeze) (Ur.lift V.toList PL.. LA.freeze)
+    , testDoubleAlloc (F.bool True) (F.bool True) LA.fromListL LA.fromListL (Ur.lift V.toList PL.. LA.freeze) (Ur.lift V.toList PL.. LA.freeze)
+    , testDoubleAlloc (F.bool True) (doubleG 8) LA.fromListL LA.fromListL (Ur.lift V.toList PL.. LA.freeze) (Ur.lift V.toList PL.. LA.freeze)
+    , testDoubleAlloc (doubleG 8) (F.int $ F.between (-10, 10)) LA.fromListL LA.fromListL (Ur.lift V.toList PL.. LA.freeze) (Ur.lift V.toList PL.. LA.freeze)
+    , testDoubleAlloc (doubleG 8) (F.bool True) LA.fromListL LA.fromListL (Ur.lift V.toList PL.. LA.freeze) (Ur.lift V.toList PL.. LA.freeze)
+    , testDoubleAlloc (doubleG 8) (doubleG 8) LA.fromListL LA.fromListL (Ur.lift V.toList PL.. LA.freeze) (Ur.lift V.toList PL.. LA.freeze)
     ]
 
 test_serialAccess :: TestTree

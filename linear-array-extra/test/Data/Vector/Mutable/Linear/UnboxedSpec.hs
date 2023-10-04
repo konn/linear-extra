@@ -24,6 +24,7 @@ module Data.Vector.Mutable.Linear.UnboxedSpec (
 import qualified Data.Array.Mutable.Linear.Unboxed as LUA
 import qualified Data.Functor.Linear as D
 import Data.Unrestricted.Linear (unur)
+import qualified Data.Unrestricted.Linear as Ur
 import qualified Data.Vector.Mutable.Linear.Unboxed as LUV
 import qualified Data.Vector.Unboxed as U
 import Linear.Array.Extra.TestUtils
@@ -460,7 +461,13 @@ test_doubleAlloc :: TestTree
 test_doubleAlloc =
   testGroup
     "can be allocated inside linearly twice"
-    [ testDoubleAlloc (F.int $ F.between (-10, 10)) LUV.fromListL LUV.freeze
-    , testDoubleAlloc (F.bool True) LUV.fromListL LUV.freeze
-    , testDoubleAlloc (doubleG 8) LUV.fromListL LUV.freeze
+    [ testDoubleAlloc (F.int $ F.between (-10, 10)) (F.int $ F.between (-10, 10)) LUV.fromListL LUV.fromListL (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAlloc (F.int $ F.between (-10, 10)) (F.bool True) LUV.fromListL LUV.fromListL (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAlloc (F.int $ F.between (-10, 10)) (doubleG 8) LUV.fromListL LUV.fromListL (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAlloc (F.bool True) (F.int $ F.between (-10, 10)) LUV.fromListL LUV.fromListL (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAlloc (F.bool True) (F.bool True) LUV.fromListL LUV.fromListL (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAlloc (F.bool True) (doubleG 8) LUV.fromListL LUV.fromListL (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAlloc (doubleG 8) (F.int $ F.between (-10, 10)) LUV.fromListL LUV.fromListL (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAlloc (doubleG 8) (F.bool True) LUV.fromListL LUV.fromListL (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAlloc (doubleG 8) (doubleG 8) LUV.fromListL LUV.fromListL (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
     ]

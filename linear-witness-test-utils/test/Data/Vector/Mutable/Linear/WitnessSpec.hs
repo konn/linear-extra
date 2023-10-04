@@ -21,6 +21,7 @@ module Data.Vector.Mutable.Linear.WitnessSpec (
 
 import qualified Data.Functor.Linear as D
 import Data.Unrestricted.Linear (unur)
+import qualified Data.Unrestricted.Linear as Ur
 import qualified Data.Vector as V
 import qualified Data.Vector.Mutable.Linear as LV
 import qualified Data.Vector.Mutable.Linear.Witness as LV
@@ -301,7 +302,13 @@ test_doubleAlloc :: TestTree
 test_doubleAlloc =
   testGroup
     "can be allocated inside linearly twice"
-    [ testDoubleAlloc (F.int $ F.between (-10, 10)) LV.fromListL LV.freeze
-    , testDoubleAlloc (F.bool True) LV.fromListL LV.freeze
-    , testDoubleAlloc (doubleG 8) LV.fromListL LV.freeze
+    [ testDoubleAlloc (F.int $ F.between (-10, 10)) (F.int $ F.between (-10, 10)) LV.fromListL LV.fromListL (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAlloc (F.int $ F.between (-10, 10)) (F.bool True) LV.fromListL LV.fromListL (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAlloc (F.int $ F.between (-10, 10)) (doubleG 8) LV.fromListL LV.fromListL (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAlloc (F.bool True) (F.int $ F.between (-10, 10)) LV.fromListL LV.fromListL (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAlloc (F.bool True) (F.bool True) LV.fromListL LV.fromListL (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAlloc (F.bool True) (doubleG 8) LV.fromListL LV.fromListL (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAlloc (doubleG 8) (F.int $ F.between (-10, 10)) LV.fromListL LV.fromListL (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAlloc (doubleG 8) (F.bool True) LV.fromListL LV.fromListL (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAlloc (doubleG 8) (doubleG 8) LV.fromListL LV.fromListL (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
     ]

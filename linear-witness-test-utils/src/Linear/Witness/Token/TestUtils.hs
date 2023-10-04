@@ -146,36 +146,52 @@ applyArrayOpsL :: (HasArrayOp a t) => [ArrayOp a] -> t %1 -> t
 applyArrayOpsL ops a = L.foldl' (\x (Ur o) -> applyArrayOp o x) a (map Ur ops)
 
 testDoubleAlloc ::
-  (Typeable a, Show a, Eq (v a), G.Vector v a, Show (v a)) =>
+  ( Show a
+  , Show b
+  , Eq a
+  , Eq b
+  , Typeable a
+  , Typeable b
+  ) =>
   F.Gen a ->
-  ([a] -> Linearly %1 -> x) ->
-  (x %1 -> Ur (v a)) ->
+  F.Gen b ->
+  ([a] -> Linearly %1 -> t a) ->
+  ([b] -> Linearly %1 -> t b) ->
+  (t a %1 -> Ur [a]) ->
+  (t b %1 -> Ur [b]) ->
   TestTree
-testDoubleAlloc (g :: F.Gen a) fromLst frz =
-  testProperty (show $ typeRep @a) $
-    checkDoubleAlloc g fromLst frz
+testDoubleAlloc (ga :: F.Gen a) (gb :: F.Gen b) fromLstA fromLstB frzA frzB =
+  testProperty (show (typeRep @a, typeRep @b)) $
+    checkDoubleAlloc ga gb fromLstA fromLstB frzA frzB
 
 checkDoubleAlloc ::
-  (Show a, Eq (v a), G.Vector v a, Show (v a)) =>
+  ( Show a
+  , Show b
+  , Eq a
+  , Eq b
+  ) =>
   F.Gen a ->
-  ([a] -> Linearly %1 -> x) ->
-  (x %1 -> Ur (v a)) ->
+  F.Gen b ->
+  ([a] -> Linearly %1 -> t a) ->
+  ([b] -> Linearly %1 -> t b) ->
+  (t a %1 -> Ur [a]) ->
+  (t b %1 -> Ur [b]) ->
   F.Property ()
-checkDoubleAlloc g fromLst frz = do
+checkDoubleAlloc ga gb fromLstA fromLstB frzA frzB = do
   len1 <- F.gen $ F.integral $ F.between (1, 10)
   len2 <- F.gen $ F.integral $ F.between (1, 10)
   F.label "length1" [classifyRangeBy 16 len1]
   F.label "length2" [classifyRangeBy 16 len2]
-  xs <- F.gen $ F.list (F.between (len1, len1)) g
-  ys <- F.gen $ F.list (F.between (len2, len2)) g
+  xs <- F.gen $ F.list (F.between (len1, len1)) ga
+  ys <- F.gen $ F.list (F.between (len2, len2)) gb
   F.assert $
-    P.expect (G.fromList xs, G.fromList ys)
+    P.expect (xs, ys)
       .$ ( "actual"
          , unur
             ( linearly \l ->
-                besides l (fromLst xs) PL.& \(xs', l') ->
-                  fromLst ys l' PL.& \ys' ->
-                    distribUr (frz xs', frz ys')
+                besides l (fromLstA xs) PL.& \(xs', l') ->
+                  fromLstB ys l' PL.& \ys' ->
+                    distribUr (frzA xs', frzB ys')
             )
          )
 

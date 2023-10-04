@@ -349,15 +349,6 @@ checkUnsafeResizeLarger g = do
                 LUA.freeze PL.. LUA.unsafeResize (len + growth) PL.. LUA.fromListL xs
          )
 
-test_doubleAlloc :: TestTree
-test_doubleAlloc =
-  testGroup
-    "can be allocated inside linearly twice"
-    [ testDoubleAlloc (F.int $ F.between (-10, 10)) LUA.fromListL LUA.freeze
-    , testDoubleAlloc (F.bool True) LUA.fromListL LUA.freeze
-    , testDoubleAlloc (doubleG 8) LUA.fromListL LUA.freeze
-    ]
-
 test_unsafeSlice :: TestTree
 test_unsafeSlice =
   testGroup
@@ -395,4 +386,19 @@ test_serialAccess =
           (doubleG 8)
           LUA.fromListL
           LUA.freeze
+    ]
+
+test_doubleAlloc :: TestTree
+test_doubleAlloc =
+  testGroup
+    "can be allocated inside linearly twice"
+    [ testDoubleAlloc (F.int $ F.between (-10, 10)) (F.int $ F.between (-10, 10)) LUA.fromListL LUA.fromListL (Ur.lift U.toList PL.. LUA.freeze) (Ur.lift U.toList PL.. LUA.freeze)
+    , testDoubleAlloc (F.int $ F.between (-10, 10)) (F.bool True) LUA.fromListL LUA.fromListL (Ur.lift U.toList PL.. LUA.freeze) (Ur.lift U.toList PL.. LUA.freeze)
+    , testDoubleAlloc (F.int $ F.between (-10, 10)) (doubleG 8) LUA.fromListL LUA.fromListL (Ur.lift U.toList PL.. LUA.freeze) (Ur.lift U.toList PL.. LUA.freeze)
+    , testDoubleAlloc (F.bool True) (F.int $ F.between (-10, 10)) LUA.fromListL LUA.fromListL (Ur.lift U.toList PL.. LUA.freeze) (Ur.lift U.toList PL.. LUA.freeze)
+    , testDoubleAlloc (F.bool True) (F.bool True) LUA.fromListL LUA.fromListL (Ur.lift U.toList PL.. LUA.freeze) (Ur.lift U.toList PL.. LUA.freeze)
+    , testDoubleAlloc (F.bool True) (doubleG 8) LUA.fromListL LUA.fromListL (Ur.lift U.toList PL.. LUA.freeze) (Ur.lift U.toList PL.. LUA.freeze)
+    , testDoubleAlloc (doubleG 8) (F.int $ F.between (-10, 10)) LUA.fromListL LUA.fromListL (Ur.lift U.toList PL.. LUA.freeze) (Ur.lift U.toList PL.. LUA.freeze)
+    , testDoubleAlloc (doubleG 8) (F.bool True) LUA.fromListL LUA.fromListL (Ur.lift U.toList PL.. LUA.freeze) (Ur.lift U.toList PL.. LUA.freeze)
+    , testDoubleAlloc (doubleG 8) (doubleG 8) LUA.fromListL LUA.fromListL (Ur.lift U.toList PL.. LUA.freeze) (Ur.lift U.toList PL.. LUA.freeze)
     ]
