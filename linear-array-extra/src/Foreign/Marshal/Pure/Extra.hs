@@ -1,9 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -17,19 +15,21 @@
 module Foreign.Marshal.Pure.Extra (
   get,
   set,
+  release,
   modify,
   modify_,
   module Foreign.Marshal.Pure,
 ) where
 
-import Data.Int (Int16, Int32, Int64, Int8)
-import Data.Word (Word16, Word32, Word64, Word8)
+import Control.Exception (mask_)
+import Foreign
 import Foreign.Marshal.Pure
 import Foreign.Marshal.Pure.Internal
 import GHC.Exts (runRW#)
-import GHC.IO (unIO)
+import GHC.IO (unIO, unsafeDupablePerformIO)
 import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
+import qualified Prelude as P
 
 instance KnownRepresentable Int8
 
@@ -125,3 +125,12 @@ set :: Representable a => a -> Box a %1 -> Box a
 set !a = Unsafe.toLinear \(Box poolPtr ptr) ->
   case runRW# (unIO (reprPoke ptr a)) of
     (# _, () #) -> Box poolPtr ptr
+
+release :: Box a %1 -> ()
+release (Box poolPtr ptr) = unsafeDupablePerformIO $ mask_ $ do
+  delete P.=<< peek poolPtr
+  free ptr
+  free poolPtr
+
+instance Consumable (Box a) where
+  consume = release

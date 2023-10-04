@@ -29,7 +29,7 @@ module Data.Ref.Linear.ReferenceCount.ThreadUnsafe (
   ReferenceCountException (..),
 ) where
 
-import Control.Exception (Exception, mask_, throw)
+import Control.Exception (Exception, throw)
 import Data.Alloc.Linearly.Token
 import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness)
 import Data.Array.Mutable.Linear.Primitive (PrimArray (..))
@@ -39,12 +39,9 @@ import qualified Data.Array.Mutable.Unlifted.Linear.Primitive as PAU
 import qualified Data.Bifunctor.Linear.Internal.Bifunctor as L
 import qualified Data.Replicator.Linear as Rep
 import Data.Word
-import Foreign (free, peek)
 import Foreign.Marshal.Pure (Box, Pool, Representable)
-import qualified Foreign.Marshal.Pure.Extra as Box hiding (deconstruct)
-import qualified Foreign.Marshal.Pure.Internal as Box
+import qualified Foreign.Marshal.Pure.Extra as Box
 import Prelude.Linear
-import System.IO.Unsafe (unsafeDupablePerformIO)
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
 
@@ -99,7 +96,7 @@ instance Consumable (Rc a) where
       -- consider weak count and release them accordingly
       go :: (# Ur Word64, RefCounter# #) %1 -> RefCounter# %1 -> Box a %1 -> ()
       go (# Ur 0, strong #) weak = \b ->
-        freeBox b `lseq` decrWeak weak `PAU.lseq` strong `PAU.lseq` ()
+        b `lseq` decrWeak weak `PAU.lseq` strong `PAU.lseq` ()
       go (# Ur _, strong #) weak = Unsafe.toLinear \_ ->
         strong `PAU.lseq` weak `PAU.lseq` ()
 
@@ -118,12 +115,6 @@ instance Dupable (Rc a) where
 
 maxRefCount :: Word64
 maxRefCount = 0x7FFFFFFFFFFFFFFF
-
-freeBox :: Box a %1 -> ()
-freeBox (Box.Box poolPtr ptr) = unsafeDupablePerformIO $ mask_ $ do
-  Box.delete P.=<< peek poolPtr
-  free ptr
-  free poolPtr
 
 alloc :: Representable a => a %1 -> Pool %1 -> Rc a
 {-# INLINE alloc #-}

@@ -39,6 +39,12 @@ ghc-options:
 
 library:
   source-dirs: src
+  c-sources:
+  - cbits/*.c
+  other-modules:
+  - Foreign.Atomic.Internal
+  dependencies:
+  - ghc-prim
 
 executables:
   linear-array-extra-exe:
