@@ -10,7 +10,7 @@ module Data.Vector.Mutable.Linear.Witness (
   fromListL,
 ) where
 
-import qualified Data.Array.Mutable.Linear.Extra as Array
+import qualified Data.Array.Mutable.Linear.Witness as Array
 import Data.Vector.Mutable.Linear
 import Data.Vector.Mutable.Linear.Internal
 import Linear.Witness.Token

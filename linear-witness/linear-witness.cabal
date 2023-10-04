@@ -27,6 +27,7 @@ library
   exposed-modules:
       Data.Array.Mutable.Linear.Witness
       Data.Array.Mutable.Unlifted.Linear.Witness
+      Data.Vector.Mutable.Linear.Witness
       Linear.Witness.Token
       Linear.Witness.Token.Internal
       Linear.Witness.Token.Unsafe
@@ -39,19 +40,4 @@ library
       base >=4.7 && <5
     , linear-base
     , linear-generics
-  default-language: Haskell2010
-
-test-suite linear-witness-test
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  other-modules:
-      Paths_linear_witness
-  hs-source-dirs:
-      test
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-      base >=4.7 && <5
-    , linear-base
-    , linear-generics
-    , linear-witness
   default-language: Haskell2010

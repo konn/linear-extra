@@ -43,7 +43,6 @@ library
       Data.Vector.Mutable.Linear.Extra
       Data.Vector.Mutable.Linear.Generic
       Data.Vector.Mutable.Linear.Unboxed
-      Data.Vector.Mutable.Linear.Witness
       Foreign.Marshal.Pure.Extra
   other-modules:
       Foreign.Atomic.Internal
