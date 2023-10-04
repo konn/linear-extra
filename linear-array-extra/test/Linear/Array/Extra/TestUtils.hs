@@ -31,7 +31,6 @@ module Linear.Array.Extra.TestUtils (
 ) where
 
 import qualified Control.Foldl as Foldl
-import Data.Alloc.Linearly.Token (Linearly, linearly)
 import qualified Data.Array.Mutable.Linear.Extra as LA
 import qualified Data.Array.Mutable.Linear.Unboxed as LUA
 import qualified Data.Foldable as F
@@ -46,6 +45,7 @@ import qualified Data.Vector.Mutable.Linear.Unboxed as LUV
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 import GHC.Generics (Generic)
+import Linear.Witness.Token (Linearly, linearly)
 import Prelude.Linear (Ur (..), unur)
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F
@@ -62,10 +62,10 @@ classifyRangeBy q n =
   let nDiv = (n - 1) `quot` q
    in show (nDiv * q + 1, (nDiv + 1) * q)
 
-fst' :: PL.Consumable b => (a, b) %1 -> a
+fst' :: (PL.Consumable b) => (a, b) %1 -> a
 fst' = PL.uncurry (PL.flip PL.lseq)
 
-snd' :: PL.Consumable a => (a, b) %1 -> b
+snd' :: (PL.Consumable a) => (a, b) %1 -> b
 snd' = PL.uncurry PL.lseq
 
 doubleG :: F.Precision -> F.Gen Double
@@ -107,7 +107,7 @@ instance HasArrayOp a (LA.Array a) where
     LA.get i xs PL.& \(Ur x, xs') -> LA.set i (f x) xs'
   applyArrayOp (Map (F.Fn f)) = LA.map f
 
-instance U.Unbox a => HasArrayOp a (LUA.UArray a) where
+instance (U.Unbox a) => HasArrayOp a (LUA.UArray a) where
   applyArrayOp (Get i) = \xs -> LUA.get i xs PL.& \(Ur _, xs') -> xs'
   applyArrayOp (Set i x) = LUA.set i x
   applyArrayOp (Modify i (F.Fn f)) = \xs ->
@@ -130,7 +130,7 @@ instance HasArrayOp a (V.Vector a) where
       V.modify (\mv -> MV.modify mv f i)
   applyArrayOp (Map (F.Fn f)) = Unsafe.toLinear (V.map f)
 
-instance U.Unbox a => HasArrayOp a (U.Vector a) where
+instance (U.Unbox a) => HasArrayOp a (U.Vector a) where
   applyArrayOp (Get _) = PL.id
   applyArrayOp (Set i x) =
     Unsafe.toLinear PL.$
@@ -140,24 +140,24 @@ instance U.Unbox a => HasArrayOp a (U.Vector a) where
       U.modify (\mv -> MU.modify mv f i)
   applyArrayOp (Map (F.Fn f)) = Unsafe.toLinear (U.map f)
 
-instance U.Unbox a => HasArrayOp a (LUV.Vector a) where
+instance (U.Unbox a) => HasArrayOp a (LUV.Vector a) where
   applyArrayOp (Get i) = \xs -> LUV.get i xs PL.& \(Ur _, xs') -> xs'
   applyArrayOp (Set i x) = LUV.set i x
   applyArrayOp (Modify i (F.Fn f)) = LUV.modify_ f i
   applyArrayOp (Map (F.Fn f)) = PL.flip LUV.map f
 
-applyArrayOps :: HasArrayOp a t => [ArrayOp a] -> t -> t
+applyArrayOps :: (HasArrayOp a t) => [ArrayOp a] -> t -> t
 {-# ANN applyArrayOps "HLint: ignore Avoid lambda" #-}
 applyArrayOps = flip $ foldl' (\xs op -> applyArrayOp op xs)
 
-applyArrayOpsL :: HasArrayOp a t => [ArrayOp a] -> t %1 -> t
+applyArrayOpsL :: (HasArrayOp a t) => [ArrayOp a] -> t %1 -> t
 {-# ANN applyArrayOpsL "HLint: ignore Avoid lambda" #-}
 applyArrayOpsL ops a = L.foldl' (\x (Ur o) -> applyArrayOp o x) a (map Ur ops)
 
 checkSerialUpdateSemantics ::
   (Show a, F.Function a, Eq (v a), HasArrayOp a (v a), G.Vector v a, HasArrayOp a x, Show (v a)) =>
   F.Gen a ->
-  (Linearly %1 -> [a] -> x) ->
+  ([a] -> Linearly %1 -> x) ->
   (x %1 -> Ur (v a)) ->
   F.Property ()
 checkSerialUpdateSemantics g fromLst frz = do
@@ -191,8 +191,9 @@ checkSerialUpdateSemantics g fromLst frz = do
   F.assert $
     P.expect (applyArrayOps upds $ G.fromList xs)
       .$ ( "array"
-         , unur PL.$ linearly \l ->
-            frz (applyArrayOpsL upds (fromLst l xs))
+         , unur PL.$
+            linearly PL.$
+              frz PL.. applyArrayOpsL upds PL.. fromLst xs
          )
 
 opIndex :: ArrayOp a -> Maybe Int
@@ -225,7 +226,7 @@ testWithGens l p =
     , F.testProperty "Double" $ p $ doubleG 8
     ]
 
-genLenList :: Show a => F.Gen a -> F.Property' e (Word, [a])
+genLenList :: (Show a) => F.Gen a -> F.Property' e (Word, [a])
 genLenList g = do
   len <- F.gen $ F.integral (F.between (0, 128))
   F.label "length" [classifyRangeBy 16 len]
@@ -246,8 +247,8 @@ genSlice (fromIntegral -> len) = do
   F.label "% range" [classifyPercent range len]
   pure Slice {..}
 
-instance Semigroup a => PL.Semigroup (Ur a) where
+instance (Semigroup a) => PL.Semigroup (Ur a) where
   Ur a <> Ur b = Ur (a <> b)
 
-instance Monoid a => PL.Monoid (Ur a) where
+instance (Monoid a) => PL.Monoid (Ur a) where
   mempty = Ur mempty

@@ -51,8 +51,6 @@ module Data.Array.Mutable.Linear.Primitive (
   unsafeWrite,
 ) where
 
-import Data.Alloc.Linearly.Token
-import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness)
 import qualified Data.Array.Mutable.Linear.Class as C
 import Data.Array.Mutable.Unlifted.Linear.Primitive (PrimArray#)
 import qualified Data.Array.Mutable.Unlifted.Linear.Primitive as Unlifted
@@ -60,6 +58,8 @@ import Data.Primitive (Prim)
 import qualified Data.Primitive as Prim
 import qualified Data.Vector.Primitive as PV
 import GHC.Stack (HasCallStack)
+import Linear.Witness.Token
+import Linear.Witness.Token.Unsafe (HasLinearWitness)
 import Prelude.Linear hiding (map, read)
 import qualified Prelude as P
 
@@ -93,10 +93,10 @@ The size must be non-negative, otherwise this errors.
 
 /See also/: 'unsafeAlloc'
 -}
-allocL :: (HasCallStack, Prim a) => Linearly %1 -> Int -> a -> PrimArray a
-allocL l s x
+allocL :: (HasCallStack, Prim a) => Int -> a -> Linearly %1 -> PrimArray a
+allocL s x l
   | s < 0 = error "PrimArray.alloc: negative size" l
-  | otherwise = PrimArray (Unlifted.allocL l s x)
+  | otherwise = PrimArray (Unlifted.allocL s x l)
 
 -- | Same as 'alloc', but without initial value.
 unsafeAlloc :: (Prim a) => Int -> (PrimArray a %1 -> Ur b) %1 -> Ur b
@@ -104,8 +104,8 @@ unsafeAlloc :: (Prim a) => Int -> (PrimArray a %1 -> Ur b) %1 -> Ur b
 unsafeAlloc s f = Unlifted.unsafeAlloc s \arr# -> f (PrimArray arr#)
 
 -- | Same as 'alloc', but without initial value.
-unsafeAllocL :: (Prim a) => Linearly %1 -> Int -> PrimArray a
-unsafeAllocL l s = PrimArray (Unlifted.unsafeAllocL l s)
+unsafeAllocL :: (Prim a) => Int -> Linearly %1 -> PrimArray a
+unsafeAllocL s l = PrimArray (Unlifted.unsafeAllocL s l)
 
 {- | Allocate a constant array given a size and an initial value,
 using another array as a uniqueness proof.
@@ -124,7 +124,7 @@ allocBeside s x (PrimArray orig)
     wrap :: (# PrimArray# a, PrimArray# b #) %1 -> (PrimArray a, PrimArray b)
     wrap (# orig, new #) = (PrimArray orig, PrimArray new)
 
-unsafeAllocBeside :: Prim a => Int -> PrimArray b %1 -> (PrimArray a, PrimArray b)
+unsafeAllocBeside :: (Prim a) => Int -> PrimArray b %1 -> (PrimArray a, PrimArray b)
 unsafeAllocBeside s (PrimArray orig) = wrap (Unlifted.unsafeAllocBeside s orig)
   where
     wrap :: (# PrimArray# a, PrimArray# b #) %1 -> (PrimArray a, PrimArray b)
@@ -149,11 +149,10 @@ fromList list (f :: PrimArray a %1 -> Ur b) =
 
 fromListL ::
   (Prim a) =>
-  Linearly %1 ->
   [a] ->
+  Linearly %1 ->
   PrimArray a
-fromListL l (list :: [a]) =
-  insert $ unsafeAllocL l (P.length list)
+fromListL (list :: [a]) = insert . unsafeAllocL (P.length list)
   where
     insert :: PrimArray a %1 -> PrimArray a
     insert = doWrites (P.zip list [0 ..])
@@ -162,7 +161,7 @@ fromListL l (list :: [a]) =
     doWrites [] arr = arr
     doWrites ((a, ix) : xs) arr = doWrites xs (unsafeSet ix a arr)
 
-size :: Prim a => PrimArray a %1 -> (Ur Int, PrimArray a)
+size :: (Prim a) => PrimArray a %1 -> (Ur Int, PrimArray a)
 size (PrimArray arr) = f (Unlifted.size arr)
   where
     f :: (# Ur Int, PrimArray# a #) %1 -> (Ur Int, PrimArray a)
@@ -189,11 +188,11 @@ write arr i a = set i a arr
 {- | Same as 'set', but does not do bounds-checking. The behaviour is undefined
 if an out-of-bounds index is provided.
 -}
-unsafeSet :: Prim a => Int -> a -> PrimArray a %1 -> PrimArray a
+unsafeSet :: (Prim a) => Int -> a -> PrimArray a %1 -> PrimArray a
 unsafeSet ix val (PrimArray arr) =
   PrimArray (Unlifted.set ix val arr)
 
-fill :: Prim a => a -> PrimArray a %1 -> PrimArray a
+fill :: (Prim a) => a -> PrimArray a %1 -> PrimArray a
 fill a (PrimArray arr) = PrimArray (Unlifted.fill a arr)
 
 -- | Same as 'unsafeSet', but takes the 'PrimArray' as the first parameter.
@@ -213,14 +212,14 @@ read arr i = get i arr
 {- | Same as 'get', but does not do bounds-checking. The behaviour is undefined
 if an out-of-bounds index is provided.
 -}
-unsafeGet :: Prim a => Int -> PrimArray a %1 -> (Ur a, PrimArray a)
+unsafeGet :: (Prim a) => Int -> PrimArray a %1 -> (Ur a, PrimArray a)
 unsafeGet ix (PrimArray arr) = wrap (Unlifted.get ix arr)
   where
     wrap :: (# Ur a, PrimArray# a #) %1 -> (Ur a, PrimArray a)
     wrap (# ret, arr #) = (ret, PrimArray arr)
 
 -- | Same as 'unsafeGet', but takes the 'PrimArray' as the first parameter.
-unsafeRead :: Prim a => PrimArray a %1 -> Int -> (Ur a, PrimArray a)
+unsafeRead :: (Prim a) => PrimArray a %1 -> Int -> (Ur a, PrimArray a)
 unsafeRead arr i = unsafeGet i arr
 
 {- | Resize an array. That is, given an array, a target size, and a seed
@@ -258,7 +257,7 @@ unsafeResize newSize seed (PrimArray arr :: PrimArray a) =
     wrap (# src, dst #) = src `Unlifted.lseq` PrimArray dst
 
 -- | Return the array elements as a lazy list.
-toList :: Prim a => PrimArray a %1 -> Ur [a]
+toList :: (Prim a) => PrimArray a %1 -> Ur [a]
 toList (PrimArray arr) = Unlifted.toList arr
 
 {- | Copy a slice of the array, starting from given offset and copying given
@@ -315,7 +314,7 @@ unsafeSlice from targetSize (PrimArray old :: PrimArray a) =
 {- | /O(1)/ Convert an 'PrimArray' to an immutable primitive 'PV.Vector' (from
 'vector' package).
 -}
-freeze :: Prim a => PrimArray a %1 -> Ur (PV.Vector a)
+freeze :: (Prim a) => PrimArray a %1 -> Ur (PV.Vector a)
 freeze (PrimArray arr) =
   Unlifted.freeze
     (\pa@(Prim.PrimArray a) -> PV.Vector 0 (Prim.sizeofPrimArray pa) (Prim.ByteArray a))
@@ -324,7 +323,7 @@ freeze (PrimArray arr) =
 map :: (Prim a, Prim b) => (a -> b) -> PrimArray a %1 -> PrimArray b
 map f (PrimArray arr) = PrimArray (Unlifted.map f arr)
 
-instance Prim a => C.Array PrimArray a where
+instance (Prim a) => C.Array PrimArray a where
   size = size
   fromList = fromList
   unsafeAlloc = unsafeAlloc

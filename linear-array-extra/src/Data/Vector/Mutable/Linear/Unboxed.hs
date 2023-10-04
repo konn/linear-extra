@@ -74,8 +74,6 @@ module Data.Vector.Mutable.Linear.Unboxed (
 
 import qualified Control.Functor.Linear as C
 import Control.Monad.Fix (fix)
-import Data.Alloc.Linearly.Token
-import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness)
 import Data.Array.Mutable.Linear.Unboxed (UArray)
 import qualified Data.Array.Mutable.Linear.Unboxed as Array
 import qualified Data.Array.Mutable.Linear.Unboxed.Internal as Array
@@ -88,6 +86,8 @@ import qualified Data.Vector.Unboxed.Mutable as MU
 import GHC.Exts (runRW#)
 import GHC.IO (unIO)
 import GHC.Stack (HasCallStack)
+import Linear.Witness.Token
+import Linear.Witness.Token.Unsafe (HasLinearWitness)
 import Prelude.Linear hiding (filter, map, mapMaybe)
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
@@ -99,38 +99,38 @@ data Vector a where
 instance Consumable (Vector a) where
   consume (Vec n arr) = n `lseq` consume arr
 
-instance U.Unbox a => Dupable (Vector a) where
+instance (U.Unbox a) => Dupable (Vector a) where
   dup2 (Vec n arr) =
     BiL.bimap (Vec n) (Vec n) (dup2 arr)
 
-empty :: U.Unbox a => (Vector a %1 -> Ur b) %1 -> Ur b
+empty :: (U.Unbox a) => (Vector a %1 -> Ur b) %1 -> Ur b
 empty f = Array.unsafeAlloc 0 (f . Vec 0)
 
-emptyL :: U.Unbox a => Linearly %1 -> Vector a
-emptyL l = Vec 0 $ Array.unsafeAllocL l 0
+emptyL :: (U.Unbox a) => Linearly %1 -> Vector a
+emptyL = Vec 0 . Array.unsafeAllocL 0
 
 constant :: (HasCallStack, U.Unbox a) => Int -> a -> (Vector a %1 -> Ur b) %1 -> Ur b
 constant n a f
   | n < 0 = error ("constant: must be non-negative but got: " <> show n) f
   | otherwise = Array.unsafeAlloc n (f . Vec n . Array.fill a)
 
-constantL :: (HasCallStack, U.Unbox a) => Linearly %1 -> Int -> a -> Vector a
-constantL l n a
-  | n < 0 = error ("constant: must be non-negative but got: " <> show n) l
-  | otherwise = Vec n (Array.fill a (Array.unsafeAllocL l n))
+constantL :: (HasCallStack, U.Unbox a) => Int -> a -> Linearly %1 -> Vector a
+constantL n a
+  | n < 0 = error $ "constant: must be non-negative but got: " <> show n
+  | otherwise = Vec n . Array.fill a . Array.unsafeAllocL n
 
 -- | Allocator from a list
 fromList :: (U.Unbox a) => [a] -> (Vector a %1 -> Ur b) %1 -> Ur b
 fromList xs f = Array.fromList xs (f . fromArray)
 
 -- | Allocator from a list
-fromListL :: (U.Unbox a) => Linearly %1 -> [a] -> Vector a
-fromListL l xs = fromArray $ Array.fromListL l xs
+fromListL :: (U.Unbox a) => [a] -> Linearly %1 -> Vector a
+fromListL xs = fromArray . Array.fromListL xs
 
 fromVectorL :: (U.Unbox a) => Linearly %1 -> U.Vector a %1 -> Vector a
 fromVectorL l = fromArray . Array.fromVectorL l
 
-fromArray :: U.Unbox a => UArray a %1 -> Vector a
+fromArray :: (U.Unbox a) => UArray a %1 -> Vector a
 fromArray arr =
   Array.size arr & \(Ur n, arr) ->
     Vec n arr
@@ -143,7 +143,7 @@ set i a (Vec n arr)
   | i < n = unsafeSet i a (Vec n arr)
   | otherwise = arr `lseq` error ("set: Index out of bounds: " <> show (i, n))
 
-unsafeSet :: U.Unbox a => Int -> a -> Vector a %1 -> Vector a
+unsafeSet :: (U.Unbox a) => Int -> a -> Vector a %1 -> Vector a
 unsafeSet i x (Vec n arr) =
   Array.unsafeSet i x arr & \arr ->
     Vec n arr
@@ -158,7 +158,7 @@ modify_ f i vec =
   modify (\a -> (f a, ())) i vec & \(Ur (), vec) ->
     vec
 
-unsafeModify :: U.Unbox a => (a -> (a, b)) -> Int -> Vector a %1 -> (Ur b, Vector a)
+unsafeModify :: (U.Unbox a) => (a -> (a, b)) -> Int -> Vector a %1 -> (Ur b, Vector a)
 unsafeModify f i (Vec n arr) =
   Array.unsafeGet i arr & \(Ur a, arr) ->
     case f a of
@@ -166,7 +166,7 @@ unsafeModify f i (Vec n arr) =
         Array.unsafeSet i a arr & \arr ->
           (Ur b, Vec n arr)
 
-capacity :: U.Unbox a => Vector a %1 -> (Ur Int, Vector a)
+capacity :: (U.Unbox a) => Vector a %1 -> (Ur Int, Vector a)
 capacity (Vec n arr) =
   Array.size arr & \(Ur cap, arr) ->
     (Ur cap, Vec n arr)
@@ -176,13 +176,13 @@ get i (Vec n arr)
   | i < n = unsafeGet i (Vec n arr)
   | otherwise = arr `lseq` error ("get: out of bound: " <> show (i, n))
 
-unsafeGet :: U.Unbox a => Int -> Vector a %1 -> (Ur a, Vector a)
+unsafeGet :: (U.Unbox a) => Int -> Vector a %1 -> (Ur a, Vector a)
 unsafeGet i (Vec n arr) = C.fmap (Vec n) (Array.unsafeGet i arr)
 
 {- | Resize the vector to not have any wasted memory (size == capacity). This
 returns a semantically identical vector.
 -}
-shrinkToFit :: U.Unbox a => Vector a %1 -> Vector a
+shrinkToFit :: (U.Unbox a) => Vector a %1 -> Vector a
 shrinkToFit vec =
   capacity vec & \(Ur cap, vec') ->
     size vec' & \(Ur s', vec'') ->
@@ -193,7 +193,7 @@ shrinkToFit vec =
 {- | Insert at the end of the vector. This will grow the vector if there
 is no empty space.
 -}
-push :: U.Unbox a => a -> Vector a %1 -> Vector a
+push :: (U.Unbox a) => a -> Vector a %1 -> Vector a
 push x vec =
   growToFit 1 vec & \(Vec s arr) ->
     unsafeSet s x (Vec (s + 1) arr)
@@ -201,7 +201,7 @@ push x vec =
 {- | Push a raw unboxed 'U.Vector' from @vector@ package at the end.
 This always copies the pushed vector.
 -}
-appendVector :: U.Unbox a => U.Vector a -> Vector a %1 -> Vector a
+appendVector :: (U.Unbox a) => U.Vector a -> Vector a %1 -> Vector a
 {-# NOINLINE appendVector #-}
 appendVector news vec =
   let growth = U.length news
@@ -216,7 +216,7 @@ appendVector news vec =
 {- | Pop from the end of the vector. This will never shrink the vector, use
 'shrinkToFit' to remove the wasted space.
 -}
-pop :: U.Unbox a => Vector a %1 -> (Ur (Maybe a), Vector a)
+pop :: (U.Unbox a) => Vector a %1 -> (Ur (Maybe a), Vector a)
 pop vec =
   size vec & \case
     (Ur 0, vec') ->
@@ -445,7 +445,7 @@ slice from newSize (Vec oldSize arr)
       error ("Slice index out of bounds: (off, len, orig) = " <> show (from, newSize, oldSize)) arr
   | otherwise = unsafeSlice from newSize (Vec oldSize arr)
 
-unsafeSlice :: U.Unbox a => Int -> Int -> Vector a %1 -> Vector a
+unsafeSlice :: (U.Unbox a) => Int -> Int -> Vector a %1 -> Vector a
 {-# INLINE unsafeSlice #-}
 unsafeSlice from newSize (Vec _ arr)
   | from == 0 = Vec newSize arr
@@ -454,7 +454,7 @@ unsafeSlice from newSize (Vec _ arr)
         oldArr `lseq` fromArray newArr
 
 -- | Return value is @(orig, slice)@
-slice' :: U.Unbox a => Int -> Int -> Vector a %1 -> (Vector a, Vector a)
+slice' :: (U.Unbox a) => Int -> Int -> Vector a %1 -> (Vector a, Vector a)
 {-# INLINE slice' #-}
 slice' from newSize (Vec oldSize arr)
   | oldSize < from + newSize =
@@ -472,10 +472,10 @@ unsafeSlice' from newSize (Vec oldSize arr)
       Array.unsafeSlice from newSize arr & \(oldArr, newArr) ->
         (Vec oldSize oldArr, fromArray newArr)
 
-instance U.Unbox a => P.Semigroup (Vector a) where
+instance (U.Unbox a) => P.Semigroup (Vector a) where
   l <> r = l Prelude.Linear.<> r
 
-instance U.Unbox a => Semigroup (Vector a) where
+instance (U.Unbox a) => Semigroup (Vector a) where
   v1 <> Vec n src = growToFit n v1 & \dst -> go 0 n src dst
     where
       go :: Int -> Int -> UArray a %1 -> Vector a %1 -> Vector a
@@ -487,7 +487,7 @@ instance U.Unbox a => Semigroup (Vector a) where
                 go (i + 1) n src (Vec (sz + 1) dst)
 
 -- | Return the vector elements as a lazy list.
-toList :: U.Unbox a => Vector a %1 -> Ur [a]
+toList :: (U.Unbox a) => Vector a %1 -> Ur [a]
 toList (Vec n (arr :: arr a)) = go 0 n arr
   where
     go :: Int -> Int -> arr a %1 -> Ur [a]
@@ -500,14 +500,14 @@ toList (Vec n (arr :: arr a)) = go 0 n arr
 {- | /O(1)/ freeze. This will never shrink the vector, use
 'shrinkToFit' before freezing or 'U.force' after 'freeez'ing to remove the wasted space.
 -}
-freeze :: U.Unbox a => Vector a %1 -> Ur (U.Vector a)
+freeze :: (U.Unbox a) => Vector a %1 -> Ur (U.Vector a)
 freeze (Vec n uv) = Ur.lift (U.unsafeTake n) $ Array.freeze uv
 
 -- | Read-only slice of Unboxed vector
 newtype Slice s a = Slice (UArray a)
 
 withUnsafeSlice ::
-  U.Unbox a =>
+  (U.Unbox a) =>
   Int ->
   Int ->
   (forall s. Slice s a %1 -> (b, Slice s a)) %1 ->
@@ -556,11 +556,11 @@ withSliceM off newSize f (Vec oldSize arr)
       error ("Slice index out of bounds: (off, len, orig) = " <> show (off, newSize, oldSize)) f arr
   | otherwise = withUnsafeSliceM off newSize f (Vec oldSize arr)
 
-cloneS :: forall s a. U.Unbox a => Slice s a %1 -> (Slice s a, UArray a)
+cloneS :: forall s a. (U.Unbox a) => Slice s a %1 -> (Slice s a, UArray a)
 {-# INLINE cloneS #-}
 cloneS = coerce $ dup2 @(UArray a)
 
-unsafeGetS :: forall s a. U.Unbox a => Int -> Slice s a %1 -> (Ur a, Slice s a)
+unsafeGetS :: forall s a. (U.Unbox a) => Int -> Slice s a %1 -> (Ur a, Slice s a)
 {-# INLINE unsafeGetS #-}
 unsafeGetS = coerce $ Array.unsafeGet @a
 
@@ -568,11 +568,11 @@ getS :: forall s a. (HasCallStack, U.Unbox a) => Int -> Slice s a %1 -> (Ur a, S
 {-# INLINE getS #-}
 getS = coerce $ Array.get @a
 
-sizeS :: forall s a. U.Unbox a => Slice s a %1 -> (Ur Int, Slice s a)
+sizeS :: forall s a. (U.Unbox a) => Slice s a %1 -> (Ur Int, Slice s a)
 {-# INLINE sizeS #-}
 sizeS = coerce $ Array.size @a
 
-foldlSL' :: U.Unbox a => (b %1 -> a -> b) -> b %1 -> Slice s a %1 -> (b, Slice s a)
+foldlSL' :: (U.Unbox a) => (b %1 -> a -> b) -> b %1 -> Slice s a %1 -> (b, Slice s a)
 {-# INLINE foldlSL' #-}
 foldlSL' (f :: b %1 -> a -> b) b slc =
   sizeS slc & \(Ur n, slc) ->
@@ -624,7 +624,7 @@ foldMapSL' f arr =
       arr
 
 -- | For use with 'Control.Foldl.purely'.
-foldS' :: U.Unbox a => (x -> a -> x) -> x -> (x -> b) -> Slice s a %1 -> (Ur b, Slice s a)
+foldS' :: (U.Unbox a) => (x -> a -> x) -> x -> (x -> b) -> Slice s a %1 -> (Ur b, Slice s a)
 {-# INLINE foldS' #-}
 {- HLINT ignore foldS' "Redundant lambda" -}
 foldS' step ini out = \slc ->
@@ -643,7 +643,7 @@ foldS' step ini out = \slc ->
       slc
 
 -- | For use with 'Control.Foldl.purely'.
-ifoldS' :: U.Unbox a => (x -> (Int, a) -> x) -> x -> (x -> b) -> Slice s a %1 -> (Ur b, Slice s a)
+ifoldS' :: (U.Unbox a) => (x -> (Int, a) -> x) -> x -> (x -> b) -> Slice s a %1 -> (Ur b, Slice s a)
 {-# INLINE ifoldS' #-}
 {- HLINT ignore ifoldS' "Redundant lambda" -}
 ifoldS' step ini out = \slc ->

@@ -9,7 +9,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_HADDOCK hide #-}
 
-module Data.Alloc.Linearly.Token.Internal (Linearly (..)) where
+module Linear.Witness.Token.Internal (Linearly (..)) where
 
 import Data.Unrestricted.Linear
 import GHC.Generics (Generic)

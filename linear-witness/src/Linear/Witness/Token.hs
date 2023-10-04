@@ -14,10 +14,10 @@ Utility module to throw away with '*Beseide' constraints, as described in
 <https://www.tweag.io/blog/2023-03-23-linear-constraints-linearly/ LINEAR CONSTRAINTS: THE PROBLEM WITH SCOPES>.
 Thisis just a tentative workaround until Linearly Qualified Types gets implemented in GHC.
 -}
-module Data.Alloc.Linearly.Token (Linearly (), linearly, besides) where
+module Linear.Witness.Token (Linearly (), linearly, besides) where
 
-import Data.Alloc.Linearly.Token.Internal
-import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness, linearWitness)
+import Linear.Witness.Token.Internal
+import Linear.Witness.Token.Unsafe (HasLinearWitness, linearWitness)
 import Data.Unrestricted.Linear
 import GHC.Base (noinline)
 import Prelude.Linear ((&))

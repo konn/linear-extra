@@ -20,13 +20,13 @@ module Data.Vector.Mutable.Linear.UnboxedSpec (
   test_slice,
 ) where
 
-import Data.Alloc.Linearly.Token (linearly)
 import qualified Data.Array.Mutable.Linear.Unboxed as LUA
 import qualified Data.Functor.Linear as D
 import Data.Unrestricted.Linear (unur)
 import qualified Data.Vector.Mutable.Linear.Unboxed as LUV
 import qualified Data.Vector.Unboxed as U
 import Linear.Array.Extra.TestUtils
+import Linear.Witness.Token (linearly)
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F
 import Test.Falsify.Predicate ((.$))
@@ -50,7 +50,7 @@ test_constantL =
           F.assert $
             P.eq
               .$ ("constant", unur (LUV.constant len x LUV.freeze))
-              .$ ("constantL", unur (linearly \l -> LUV.freeze (LUV.constantL l len x)))
+              .$ ("constantL", unur (linearly PL.$ LUV.freeze PL.. LUV.constantL len x))
     ]
 
 test_constant :: TestTree
@@ -112,7 +112,7 @@ test_fromListL =
           (_len, xs) <- genLenList g
           F.assert $
             P.eq
-              .$ ("fromListL", unur (linearly \l -> LUV.freeze PL.$ LUV.fromListL l xs))
+              .$ ("fromListL", unur (linearly PL.$ \l -> LUV.freeze PL.$ LUV.fromListL xs l))
               .$ ("fromList", U.fromList xs)
     ]
 
@@ -149,12 +149,12 @@ test_fromArray =
             F.assert $
               P.eq
                 .$ ( "array"
-                   , unur PL.$ linearly \l ->
-                      LUA.freeze PL.$ LUA.set i x PL.$ LUA.fromListL l xs
+                   , unur PL.$ linearly PL.$ \l ->
+                      LUA.freeze PL.$ LUA.set i x PL.$ LUA.fromListL xs l
                    )
                 .$ ( "vector"
-                   , unur PL.$ linearly \l ->
-                      LUV.freeze PL.$ LUV.set i x PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                   , unur PL.$ linearly PL.$ \l ->
+                      LUV.freeze PL.$ LUV.set i x PL.$ LUV.fromArray PL.$ LUA.fromListL xs l
                    )
         , testWithGens "freeze <$> get i (fromArray xs) = freeze <$> get i xs" \g -> do
             len <- F.gen $ F.integral $ F.between (1, 128)
@@ -164,12 +164,12 @@ test_fromArray =
             F.assert $
               P.eq
                 .$ ( "array"
-                   , unur PL.$ linearly \l ->
-                      distribUr PL.$ D.fmap LUA.freeze PL.$ LUA.get i PL.$ LUA.fromListL l xs
+                   , unur PL.$ linearly PL.$ \l ->
+                      distribUr PL.$ D.fmap LUA.freeze PL.$ LUA.get i PL.$ LUA.fromListL xs l
                    )
                 .$ ( "vector"
-                   , unur PL.$ linearly \l ->
-                      distribUr PL.$ D.fmap LUV.freeze PL.$ LUV.get i PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                   , unur PL.$ linearly PL.$ \l ->
+                      distribUr PL.$ D.fmap LUV.freeze PL.$ LUV.get i PL.$ LUV.fromArray PL.$ LUA.fromListL xs l
                    )
         , testWithGens "freeze <$> size (fromArray xs) = freeze <$> size xs" \g -> do
             len <- F.gen $ F.integral $ F.between (1, 128)
@@ -178,12 +178,12 @@ test_fromArray =
             F.assert $
               P.eq
                 .$ ( "array"
-                   , unur PL.$ linearly \l ->
-                      distribUr PL.$ D.fmap LUA.freeze PL.$ LUA.size PL.$ LUA.fromListL l xs
+                   , unur PL.$ linearly PL.$ \l ->
+                      distribUr PL.$ D.fmap LUA.freeze PL.$ LUA.size PL.$ LUA.fromListL xs l
                    )
                 .$ ( "vector"
-                   , unur PL.$ linearly \l ->
-                      distribUr PL.$ D.fmap LUV.freeze PL.$ LUV.size PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                   , unur PL.$ linearly PL.$ \l ->
+                      distribUr PL.$ D.fmap LUV.freeze PL.$ LUV.size PL.$ LUV.fromArray PL.$ LUA.fromListL xs l
                    )
         , testWithGens "freeze (slice off ran (fromArray xs)) = freeze (snd' (unsafeSlice off ran xs))" \g -> do
             len <- F.gen $ F.integral $ F.between (0, 128)
@@ -202,12 +202,12 @@ test_fromArray =
             F.assert $
               P.eq
                 .$ ( "array"
-                   , unur PL.$ linearly \l ->
-                      LUA.freeze PL.$ snd' PL.$ LUA.unsafeSlice start range PL.$ LUA.fromListL l xs
+                   , unur PL.$ linearly PL.$ \l ->
+                      LUA.freeze PL.$ snd' PL.$ LUA.unsafeSlice start range PL.$ LUA.fromListL xs l
                    )
                 .$ ( "vector"
-                   , unur PL.$ linearly \l ->
-                      LUV.freeze PL.$ LUV.slice start range PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                   , unur PL.$ linearly PL.$ \l ->
+                      LUV.freeze PL.$ LUV.slice start range PL.$ LUV.fromArray PL.$ LUA.fromListL xs l
                    )
         , testGroup
             "freeze (map f (fromArray xs)) = freeze (map f xs)"
@@ -219,12 +219,12 @@ test_fromArray =
                 F.assert $
                   P.eq
                     .$ ( "array"
-                       , unur PL.$ linearly \l ->
-                          LUA.freeze PL.$ LUA.map f PL.$ LUA.fromListL l xs
+                       , unur PL.$ linearly PL.$ \l ->
+                          LUA.freeze PL.$ LUA.map f PL.$ LUA.fromListL xs l
                        )
                     .$ ( "vector"
-                       , unur PL.$ linearly \l ->
-                          LUV.freeze PL.$ PL.flip LUV.map f PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                       , unur PL.$ linearly PL.$ \l ->
+                          LUV.freeze PL.$ PL.flip LUV.map f PL.$ LUV.fromArray PL.$ LUA.fromListL xs l
                        )
             , testWithGens "-> Bool" \g -> do
                 len <- F.gen $ F.integral $ F.between (0, 128)
@@ -234,12 +234,12 @@ test_fromArray =
                 F.assert $
                   P.eq
                     .$ ( "array"
-                       , unur PL.$ linearly \l ->
-                          LUA.freeze PL.$ LUA.map f PL.$ LUA.fromListL l xs
+                       , unur PL.$ linearly PL.$ \l ->
+                          LUA.freeze PL.$ LUA.map f PL.$ LUA.fromListL xs l
                        )
                     .$ ( "vector"
-                       , unur PL.$ linearly \l ->
-                          LUV.freeze PL.$ PL.flip LUV.map f PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                       , unur PL.$ linearly PL.$ \l ->
+                          LUV.freeze PL.$ PL.flip LUV.map f PL.$ LUV.fromArray PL.$ LUA.fromListL xs l
                        )
             ]
         , testWithGens
@@ -252,12 +252,12 @@ test_fromArray =
               F.assert $
                 P.eq
                   .$ ( "array"
-                     , unur PL.$ linearly \l ->
-                        LUA.freeze PL.$ LUA.mapSame f PL.$ LUA.fromListL l xs
+                     , unur PL.$ linearly PL.$ \l ->
+                        LUA.freeze PL.$ LUA.mapSame f PL.$ LUA.fromListL xs l
                      )
                   .$ ( "vector"
-                     , unur PL.$ linearly \l ->
-                        LUV.freeze PL.$ PL.flip LUV.mapSame f PL.$ LUV.fromArray PL.$ LUA.fromListL l xs
+                     , unur PL.$ linearly PL.$ \l ->
+                        LUV.freeze PL.$ PL.flip LUV.mapSame f PL.$ LUV.fromArray PL.$ LUA.fromListL xs l
                      )
         ]
     ]
@@ -297,7 +297,7 @@ test_push =
                , unur PL.$ linearly \l ->
                   distribUr
                     ( LUV.freeze
-                        D.<$> LUV.pop (LUV.push x (LUV.fromListL l xs))
+                        D.<$> LUV.pop (LUV.push x (LUV.fromListL xs l))
                     )
                )
     ]
@@ -320,7 +320,7 @@ test_pop =
                , unur PL.$ linearly \l ->
                   distribUr
                     ( LUV.freeze
-                        D.<$> LUV.pop (LUV.fromListL l xs)
+                        D.<$> LUV.pop (LUV.fromListL xs l)
                     )
                )
     ]
@@ -376,7 +376,7 @@ checkMapMaybe tgt g = do
          , unur PL.$
             linearly \l ->
               LUV.freeze PL.$
-                LUV.mapMaybe (LUV.fromListL l xs) f
+                LUV.mapMaybe (LUV.fromListL xs l) f
          )
 
 checkFilter ::
@@ -400,7 +400,7 @@ checkFilter g = do
          , unur PL.$
             linearly \l ->
               LUV.freeze PL.$
-                LUV.filter (LUV.fromListL l xs) p
+                LUV.filter (LUV.fromListL xs l) p
          )
 
 checkMapSame ::
@@ -421,7 +421,7 @@ checkMapSame g = do
          , unur PL.$
             linearly \l ->
               LUV.freeze PL.$
-                LUV.mapSame (LUV.fromListL l xs) f
+                LUV.mapSame (LUV.fromListL xs l) f
          )
 
 checkPushSnoc :: (Eq a, Show a, U.Unbox a) => Gen a -> Property' String ()
@@ -432,10 +432,10 @@ checkPushSnoc g = do
     P.expect (U.fromList xs `U.snoc` x)
       .$ ( "actual"
          , unur PL.$
-            linearly \l ->
+            linearly PL.$ \l ->
               LUV.freeze PL.$
                 LUV.push x PL.$
-                  LUV.fromListL l xs
+                  LUV.fromListL xs l
          )
 
 test_slice :: TestTree
@@ -449,8 +449,8 @@ test_slice =
         F.assert $
           P.expect sliced
             .$ ( "actual"
-               , unur PL.$ linearly \l ->
+               , unur PL.$ linearly PL.$ \l ->
                   LUV.freeze PL.$
-                    LUV.slice offset range (LUV.fromListL l xs)
+                    LUV.slice offset range (LUV.fromListL xs l)
                )
     ]

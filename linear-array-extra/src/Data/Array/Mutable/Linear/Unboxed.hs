@@ -38,7 +38,6 @@ module Data.Array.Mutable.Linear.Unboxed (
   findIndex,
 ) where
 
-import Data.Alloc.Linearly.Token
 import Data.Array.Mutable.Linear.Unboxed.Internal
 import Data.Vector.Unboxed (Unbox)
 import qualified Data.Vector.Unboxed as U
@@ -46,6 +45,7 @@ import qualified Data.Vector.Unboxed.Mutable as MU
 import GHC.Exts (runRW#)
 import GHC.IO (unIO)
 import GHC.Stack (HasCallStack)
+import Linear.Witness.Token
 import Prelude.Linear hiding (map)
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
@@ -65,7 +65,7 @@ allocL l n x
       consume l & \() -> case runRW# (unIO $ MU.replicate n x) of
         (# _, mu #) -> UArray mu
 
-unsafeAllocBeside :: U.Unbox a => Int -> UArray b %1 -> (UArray a, UArray b)
+unsafeAllocBeside :: (U.Unbox a) => Int -> UArray b %1 -> (UArray a, UArray b)
 {-# NOINLINE unsafeAllocBeside #-}
 unsafeAllocBeside n (UArray orig) =
   case runRW# (unIO $ MU.unsafeNew n) of
@@ -87,22 +87,22 @@ get :: (HasCallStack, U.Unbox a) => Int -> UArray a %1 -> (Ur a, UArray a)
 get i arr = unsafeGet i (assertIndexInRange i arr)
 
 -- | /O(1)/ freeze
-freeze :: U.Unbox a => UArray a %1 -> Ur (U.Vector a)
+freeze :: (U.Unbox a) => UArray a %1 -> Ur (U.Vector a)
 {-# NOINLINE freeze #-}
 freeze = Unsafe.toLinear \(UArray mu) ->
   case runRW# $ unIO $ U.unsafeFreeze mu of
     (# _, uv #) -> Ur uv
 
-fromVectorL :: U.Unbox a => Linearly %1 -> U.Vector a %1 -> UArray a
+fromVectorL :: (U.Unbox a) => Linearly %1 -> U.Vector a %1 -> UArray a
 {-# NOINLINE fromVectorL #-}
 fromVectorL l = Unsafe.toLinear \uv ->
   case runRW# $ unIO $ U.unsafeThaw uv of
     (# _, mu #) -> l `lseq` UArray mu
 
-fromListL :: U.Unbox a => Linearly %1 -> [a] -> UArray a
-fromListL l (xs :: [a]) =
+fromListL :: (U.Unbox a) => [a] -> Linearly %1 -> UArray a
+fromListL (xs :: [a]) =
   let len = P.length xs
-   in go 0 xs (unsafeAllocL l len)
+   in go 0 xs . unsafeAllocL len
   where
     go :: Int -> [a] -> UArray a %1 -> UArray a
     go !_ [] arr = arr
@@ -137,7 +137,7 @@ mapSame (f :: a -> b) arr =
 
 {-# RULES "map/mapSame" map = mapSame #-}
 
-findIndex :: U.Unbox a => (a -> Bool) -> UArray a %1 -> (Ur (Maybe Int), UArray a)
+findIndex :: (U.Unbox a) => (a -> Bool) -> UArray a %1 -> (Ur (Maybe Int), UArray a)
 {-# INLINE findIndex #-}
 findIndex (p :: a -> Bool) arr = size arr & \(Ur sz, arr) -> loop 0 sz arr
   where

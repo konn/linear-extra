@@ -43,13 +43,13 @@ module Data.Vector.Mutable.Linear.Generic (
 
 import qualified Control.Functor.Linear as C
 import Control.Monad (guard)
-import Data.Alloc.Linearly.Token
-import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness)
 import Data.Array.Mutable.Linear.Class (Array)
 import qualified Data.Array.Mutable.Linear.Class as Array
 import qualified Data.Bifunctor.Linear as BiL
 import qualified Data.Unrestricted.Linear as Ur
 import GHC.Stack (HasCallStack)
+import Linear.Witness.Token
+import Linear.Witness.Token.Unsafe (HasLinearWitness)
 import Prelude.Linear hiding (filter, mapMaybe)
 import qualified Prelude as P
 
@@ -57,38 +57,38 @@ data Vector arr a where
   Vec :: {-# UNPACK #-} !Int -> arr a %1 -> Vector arr a
   deriving anyclass (HasLinearWitness)
 
-instance Array arr a => Consumable (Vector arr a) where
+instance (Array arr a) => Consumable (Vector arr a) where
   consume (Vec n arr) = n `lseq` consume arr
 
-instance Array arr a => Dupable (Vector arr a) where
+instance (Array arr a) => Dupable (Vector arr a) where
   dup2 (Vec n arr) =
     BiL.bimap (Vec n) (Vec n) (dup2 arr)
 
-empty :: Array.Array arr a => (Vector arr a %1 -> Ur b) %1 -> Ur b
+empty :: (Array.Array arr a) => (Vector arr a %1 -> Ur b) %1 -> Ur b
 empty f = Array.unsafeAlloc 0 (f . Vec 0)
 
-emptyL :: Array.Array arr a => Linearly %1 -> Vector arr a
-emptyL l = Vec 0 $ Array.unsafeAllocL l 0
+emptyL :: (Array.Array arr a) => Linearly %1 -> Vector arr a
+emptyL = Vec 0 . Array.unsafeAllocL 0
 
 constant :: (HasCallStack, Array arr a) => Int -> a -> (Vector arr a %1 -> Ur b) %1 -> Ur b
 constant n a f
   | n < 0 = error ("constant: must be non-negative but got: " <> show n) f
   | otherwise = Array.unsafeAlloc n (f . Vec n . Array.fill a)
 
-constantL :: (HasCallStack, Array arr a) => Linearly %1 -> Int -> a -> Vector arr a
-constantL l n a
-  | n < 0 = error ("constant: must be non-negative but got: " <> show n) l
-  | otherwise = Vec n (Array.fill a (Array.unsafeAllocL l n))
+constantL :: (HasCallStack, Array arr a) => Int -> a -> Linearly %1 -> Vector arr a
+constantL n a
+  | n < 0 = error ("constant: must be non-negative but got: " <> show n)
+  | otherwise = Vec n . Array.fill a . Array.unsafeAllocL n
 
 -- | Allocator from a list
 fromList :: (Array arr a) => [a] -> (Vector arr a %1 -> Ur b) %1 -> Ur b
 fromList xs f = Array.fromList xs (f . fromArray)
 
 -- | Allocator from a list
-fromListL :: (Array arr a) => Linearly %1 -> [a] -> Vector arr a
-fromListL l xs = fromArray (Array.fromListL l xs)
+fromListL :: (Array arr a) => [a] -> Linearly %1 -> Vector arr a
+fromListL xs = fromArray . Array.fromListL xs
 
-fromArray :: Array arr a => arr a %1 -> Vector arr a
+fromArray :: (Array arr a) => arr a %1 -> Vector arr a
 fromArray arr =
   Array.size arr & \(Ur n, arr) ->
     Vec n arr
@@ -101,7 +101,7 @@ set i a (Vec n arr)
   | i < n = unsafeSet i a (Vec n arr)
   | otherwise = arr `lseq` error ("set: Index out of bounds: " <> show (i, n))
 
-unsafeSet :: Array arr a => Int -> a -> Vector arr a %1 -> Vector arr a
+unsafeSet :: (Array arr a) => Int -> a -> Vector arr a %1 -> Vector arr a
 unsafeSet i x (Vec n arr) =
   Array.unsafeSet i x arr & \arr ->
     Vec n arr
@@ -116,7 +116,7 @@ modify_ f i vec =
   modify (\a -> (f a, ())) i vec & \(Ur (), vec) ->
     vec
 
-unsafeModify :: Array arr a => (a -> (a, b)) -> Int -> Vector arr a %1 -> (Ur b, Vector arr a)
+unsafeModify :: (Array arr a) => (a -> (a, b)) -> Int -> Vector arr a %1 -> (Ur b, Vector arr a)
 unsafeModify f i (Vec n arr) =
   Array.unsafeGet i arr & \(Ur a, arr) ->
     case f a of
@@ -124,7 +124,7 @@ unsafeModify f i (Vec n arr) =
         Array.unsafeSet i a arr & \arr ->
           (Ur b, Vec n arr)
 
-capacity :: Array arr a => Vector arr a %1 -> (Ur Int, Vector arr a)
+capacity :: (Array arr a) => Vector arr a %1 -> (Ur Int, Vector arr a)
 capacity (Vec n arr) =
   Array.size arr & \(Ur cap, arr) ->
     (Ur cap, Vec n arr)
@@ -134,13 +134,13 @@ get i (Vec n arr)
   | i < n = arr `lseq` error ("get: out of bound: " <> show (i, n))
   | otherwise = unsafeGet i (Vec n arr)
 
-unsafeGet :: Array arr a => Int -> Vector arr a %1 -> (Ur a, Vector arr a)
+unsafeGet :: (Array arr a) => Int -> Vector arr a %1 -> (Ur a, Vector arr a)
 unsafeGet i (Vec n arr) = C.fmap (Vec n) (Array.unsafeGet i arr)
 
 {- | Resize the vector to not have any wasted memory (size == capacity). This
 returns a semantically identical vector.
 -}
-shrinkToFit :: Array arr a => Vector arr a %1 -> Vector arr a
+shrinkToFit :: (Array arr a) => Vector arr a %1 -> Vector arr a
 shrinkToFit vec =
   capacity vec & \(Ur cap, vec') ->
     size vec' & \(Ur s', vec'') ->
@@ -151,7 +151,7 @@ shrinkToFit vec =
 {- | Insert at the end of the vector. This will grow the vector if there
 is no empty space.
 -}
-push :: Array arr a => a -> Vector arr a %1 -> Vector arr a
+push :: (Array arr a) => a -> Vector arr a %1 -> Vector arr a
 push x vec =
   growToFit 1 vec & \(Vec s arr) ->
     unsafeSet s x (Vec (s + 1) arr)
@@ -159,7 +159,7 @@ push x vec =
 {- | Pop from the end of the vector. This will never shrink the vector, use
 'shrinkToFit' to remove the wasted space.
 -}
-pop :: Array arr a => Vector arr a %1 -> (Ur (Maybe a), Vector arr a)
+pop :: (Array arr a) => Vector arr a %1 -> (Ur (Maybe a), Vector arr a)
 pop vec =
   size vec & \case
     (Ur 0, vec') ->
@@ -285,10 +285,10 @@ slice from newSize (Vec oldSize arr)
       Array.unsafeSlice from newSize arr & \(oldArr, newArr) ->
         oldArr `lseq` fromArray newArr
 
-instance Array arr a => P.Semigroup (Vector arr a) where
+instance (Array arr a) => P.Semigroup (Vector arr a) where
   l <> r = l Prelude.Linear.<> r
 
-instance Array arr a => Semigroup (Vector arr a) where
+instance (Array arr a) => Semigroup (Vector arr a) where
   v1 <> Vec n src = growToFit n v1 & \dst -> go 0 n src dst
     where
       go :: Int -> Int -> arr a %1 -> Vector arr a %1 -> Vector arr a
@@ -300,7 +300,7 @@ instance Array arr a => Semigroup (Vector arr a) where
                 go (i + 1) n src (Vec (sz + 1) dst)
 
 -- | Return the vector elements as a lazy list.
-toList :: Array arr a => Vector arr a %1 -> Ur [a]
+toList :: (Array arr a) => Vector arr a %1 -> Ur [a]
 toList (Vec n (arr :: arr a)) = go 0 n arr
   where
     go :: Int -> Int -> arr a %1 -> Ur [a]

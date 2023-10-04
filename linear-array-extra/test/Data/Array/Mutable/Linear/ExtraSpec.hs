@@ -7,11 +7,11 @@ module Data.Array.Mutable.Linear.ExtraSpec (
   test_serialAccess,
 ) where
 
-import Data.Alloc.Linearly.Token (linearly)
 import qualified Data.Array.Mutable.Linear.Extra as LA
 import Data.Unrestricted.Linear (unur)
 import qualified Data.Vector as V
 import Linear.Array.Extra.TestUtils
+import Linear.Witness.Token (linearly)
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F
 import Test.Falsify.Predicate ((.$))
@@ -34,7 +34,7 @@ test_allocL =
           F.assert $
             P.eq
               .$ ("alloc", unur (LA.alloc len x LA.freeze))
-              .$ ("allocL", unur (linearly \l -> LA.freeze (LA.allocL l len x)))
+              .$ ("allocL", unur (linearly PL.$ LA.freeze PL.. LA.allocL len x))
     ]
 
 test_fromListL :: TestTree
@@ -48,7 +48,7 @@ test_fromListL =
           label "length" [classifyRangeBy 16 $ length xs]
           F.assert $
             P.eq
-              .$ ("alloc", unur (linearly \l -> LA.freeze PL.$ LA.fromListL l xs))
+              .$ ("alloc", unur (linearly PL.$ LA.freeze PL.. LA.fromListL xs))
               .$ ("replicate", V.fromList xs)
     ]
 

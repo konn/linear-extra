@@ -4,17 +4,17 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 
-name:           linear-array-extra
-version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/konn/linear-array-extra#readme>
-homepage:       https://github.com/konn/linear-array-extra#readme
-bug-reports:    https://github.com/konn/linear-array-extra/issues
-author:         Hiromi ISHII
-maintainer:     konn.jinro_at_gmail.com
-copyright:      2023 (c) Hiromi ISHII
-license:        BSD3
-license-file:   LICENSE
-build-type:     Simple
+name:               linear-array-extra
+version:            0.1.0.0
+description:        Please see the README on GitHub at <https://github.com/konn/linear-array-extra#readme>
+homepage:           https://github.com/konn/linear-array-extra#readme
+bug-reports:        https://github.com/konn/linear-array-extra/issues
+author:             Hiromi ISHII
+maintainer:         konn.jinro_at_gmail.com
+copyright:          2023 (c) Hiromi ISHII
+license:            BSD3
+license-file:       LICENSE
+build-type:         Simple
 extra-source-files:
     README.md
     CHANGELOG.md
@@ -25,9 +25,6 @@ source-repository head
 
 library
   exposed-modules:
-      Data.Alloc.Linearly.Token
-      Data.Alloc.Linearly.Token.Internal
-      Data.Alloc.Linearly.Token.Unsafe
       Data.Array.Destination.Unboxed
       Data.Array.Destination.Vector.Generic
       Data.Array.Mutable.Linear.Class
@@ -46,6 +43,7 @@ library
       Data.Vector.Mutable.Linear.Extra
       Data.Vector.Mutable.Linear.Generic
       Data.Vector.Mutable.Linear.Unboxed
+      Data.Vector.Mutable.Linear.Witness
       Foreign.Marshal.Pure.Extra
   other-modules:
       Foreign.Atomic.Internal
@@ -59,6 +57,7 @@ library
     , ghc-prim
     , linear-base >=0.2
     , linear-generics
+    , linear-witness
     , primitive
     , vector
   default-language: Haskell2010
@@ -75,6 +74,7 @@ executable linear-array-extra-exe
     , linear-array-extra
     , linear-base >=0.2
     , linear-generics
+    , linear-witness
     , primitive
     , vector
   default-language: Haskell2010
@@ -106,6 +106,7 @@ test-suite linear-array-extra-test
     , linear-array-extra
     , linear-base
     , linear-generics
+    , linear-witness
     , primitive
     , tasty
     , tasty-hunit

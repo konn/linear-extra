@@ -31,13 +31,13 @@ module Data.Array.Mutable.Linear.Storable.Internal (
   unsafeSlice,
 ) where
 
-import Data.Alloc.Linearly.Token (Linearly, linearly)
-import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness)
 import qualified Data.Array.Mutable.Linear.Class as C
 import Data.Function (fix)
 import Foreign
 import Foreign.Marshal.Pure (MkRepresentable (..), Representable (..))
 import GHC.Base (runRW#, unIO)
+import Linear.Witness.Token (Linearly, linearly)
+import Linear.Witness.Token.Unsafe (HasLinearWitness)
 import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
@@ -78,14 +78,14 @@ instance (Storable a) => Dupable (SArray a) where
       P.pure (SArray i mu, SArray i mu')
   {-# NOINLINE dup2 #-}
 
-unsafeAlloc :: Storable a => Int -> (SArray a %1 -> Ur b) %1 -> Ur b
+unsafeAlloc :: (Storable a) => Int -> (SArray a %1 -> Ur b) %1 -> Ur b
 {-# NOINLINE unsafeAlloc #-}
 unsafeAlloc n (f :: SArray a %1 -> b) =
   f (SArray n (unsafeStrictPerformIO $ mallocArray n))
 
-unsafeAllocL :: Storable a => Linearly %1 -> Int -> SArray a
+unsafeAllocL :: (Storable a) => Int -> Linearly %1 -> SArray a
 {-# NOINLINE unsafeAllocL #-}
-unsafeAllocL l n =
+unsafeAllocL n l =
   l `lseq` SArray n (unsafeStrictPerformIO $ mallocArray n)
 
 size :: SArray a %1 -> (Ur Int, SArray a)
@@ -93,7 +93,7 @@ size :: SArray a %1 -> (Ur Int, SArray a)
 size (SArray i a) = (Ur i, SArray i a)
 
 -- FIXME: more efficient implementation?
-fill :: Storable a => a -> SArray a %1 -> SArray a
+fill :: (Storable a) => a -> SArray a %1 -> SArray a
 {-# NOINLINE fill #-}
 fill a = Unsafe.toLinear \arr@(SArray n ptr) ->
   let go =
@@ -106,25 +106,24 @@ fill a = Unsafe.toLinear \arr@(SArray n ptr) ->
           0
    in unsafeStrictPerformIO go
 
-fromListL :: Storable a => Linearly %1 -> [a] -> SArray a
+fromListL :: (Storable a) => [a] -> Linearly %1 -> SArray a
 {-# NOINLINE fromListL #-}
-fromListL l (xs :: [a]) =
+fromListL (xs :: [a]) l =
   l `lseq`
     let len = P.length xs
      in SArray len $ unsafeStrictPerformIO (newArray xs)
 
-fromList :: Storable a => [a] -> (SArray a %1 -> Ur b) %1 -> Ur b
+fromList :: (Storable a) => [a] -> (SArray a %1 -> Ur b) %1 -> Ur b
 {-# INLINE fromList #-}
-fromList xs f = linearly \l ->
-  f (fromListL l xs)
+fromList xs f = linearly $ f . fromListL xs
 
-unsafeSet :: Storable a => Int -> a -> SArray a %1 -> SArray a
+unsafeSet :: (Storable a) => Int -> a -> SArray a %1 -> SArray a
 {-# NOINLINE unsafeSet #-}
 unsafeSet i a = Unsafe.toLinear \arr0@(SArray _ ptr) ->
   case unsafeStrictPerformIO (pokeElemOff ptr i a) of
     () -> arr0
 
-unsafeGet :: Storable a => Int -> SArray a %1 -> (Ur a, SArray a)
+unsafeGet :: (Storable a) => Int -> SArray a %1 -> (Ur a, SArray a)
 {-# NOINLINE unsafeGet #-}
 unsafeGet i = Unsafe.toLinear \arr0@(SArray _ ptr) ->
   case unsafeStrictPerformIO (peekElemOff ptr i) of

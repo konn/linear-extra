@@ -28,13 +28,13 @@ module Data.Array.Mutable.Linear.Unboxed.Internal (
   unsafeAllocL,
 ) where
 
-import Data.Alloc.Linearly.Token (Linearly)
-import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness)
 import qualified Data.Array.Mutable.Linear.Class as C
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 import GHC.Base (runRW#, unIO)
 import GHC.Exts (RealWorld)
+import Linear.Witness.Token (Linearly)
+import Linear.Witness.Token.Unsafe (HasLinearWitness)
 import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
@@ -66,13 +66,13 @@ instance (U.Unbox a) => C.Array UArray a where
   unsafeResize = unsafeResize
   unsafeAllocL = unsafeAllocL
 
-unsafeAlloc :: U.Unbox a => Int -> (UArray a %1 -> Ur b) %1 -> Ur b
+unsafeAlloc :: (U.Unbox a) => Int -> (UArray a %1 -> Ur b) %1 -> Ur b
 {-# NOINLINE unsafeAlloc #-}
 unsafeAlloc n (f :: UArray a %1 -> b) =
   case runRW# (unIO $ MU.unsafeNew n) of
     (# _, mu #) -> f (UArray mu)
 
-fromList :: U.Unbox a => [a] -> (UArray a %1 -> Ur b) %1 -> Ur b
+fromList :: (U.Unbox a) => [a] -> (UArray a %1 -> Ur b) %1 -> Ur b
 fromList (xs :: [a]) f =
   let len = P.length xs
    in unsafeAlloc len (f . go 0 xs)
@@ -82,23 +82,23 @@ fromList (xs :: [a]) f =
     go !i (x : xs) arr =
       go (i + 1) xs (unsafeSet i x arr)
 
-fill :: U.Unbox a => a -> UArray a %1 -> UArray a
+fill :: (U.Unbox a) => a -> UArray a %1 -> UArray a
 {-# NOINLINE fill #-}
 fill a = Unsafe.toLinear \(UArray arr) ->
   case runRW# $ unIO $ MU.set arr a of
     (# _, () #) -> UArray arr
 
-unsafeSet :: U.Unbox a => Int -> a -> UArray a %1 -> UArray a
+unsafeSet :: (U.Unbox a) => Int -> a -> UArray a %1 -> UArray a
 {-# NOINLINE unsafeSet #-}
 unsafeSet i a = Unsafe.toLinear \arr0@(UArray mu) ->
   case runRW# (unIO $ MU.unsafeWrite mu i a) of
     (# _, () #) -> arr0
 
-size :: U.Unbox a => UArray a %1 -> (Ur Int, UArray a)
+size :: (U.Unbox a) => UArray a %1 -> (Ur Int, UArray a)
 size = Unsafe.toLinear \(UArray mu) ->
   (Ur (MU.length mu), UArray mu)
 
-unsafeGet :: U.Unbox a => Int -> UArray a %1 -> (Ur a, UArray a)
+unsafeGet :: (U.Unbox a) => Int -> UArray a %1 -> (Ur a, UArray a)
 {-# NOINLINE unsafeGet #-}
 unsafeGet i = Unsafe.toLinear \arr0@(UArray mu) ->
   case runRW# (unIO $ MU.unsafeRead mu i) of
@@ -121,8 +121,8 @@ unsafeResize n = Unsafe.toLinear \(UArray arr) ->
     GT -> case runRW# $ unIO $ MU.unsafeGrow arr (n - MU.length arr) of
       (# _, arr #) -> UArray arr
 
-unsafeAllocL :: U.Unbox a => Linearly %1 -> Int -> UArray a
+unsafeAllocL :: (U.Unbox a) => Int -> Linearly %1 -> UArray a
 {-# NOINLINE unsafeAllocL #-}
-unsafeAllocL l n =
+unsafeAllocL n l =
   l `lseq` case runRW# (unIO $ MU.unsafeNew n) of
     (# _, mu #) -> UArray mu

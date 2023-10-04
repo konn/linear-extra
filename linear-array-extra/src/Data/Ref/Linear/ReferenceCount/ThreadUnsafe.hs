@@ -30,17 +30,18 @@ module Data.Ref.Linear.ReferenceCount.ThreadUnsafe (
 ) where
 
 import Control.Exception (Exception, throw)
-import Data.Alloc.Linearly.Token
-import Data.Alloc.Linearly.Token.Unsafe (HasLinearWitness)
 import Data.Array.Mutable.Linear.Primitive (PrimArray (..))
 import qualified Data.Array.Mutable.Linear.Primitive as PA
 import Data.Array.Mutable.Unlifted.Linear.Primitive (PrimArray#)
 import qualified Data.Array.Mutable.Unlifted.Linear.Primitive as PAU
+import qualified Data.Bifunctor.Linear as BiL
 import qualified Data.Bifunctor.Linear.Internal.Bifunctor as L
 import qualified Data.Replicator.Linear as Rep
 import Data.Word
 import Foreign.Marshal.Pure (Box, Pool, Representable)
 import qualified Foreign.Marshal.Pure.Extra as Box
+import Linear.Witness.Token
+import Linear.Witness.Token.Unsafe (HasLinearWitness)
 import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
@@ -116,47 +117,44 @@ instance Dupable (Rc a) where
 maxRefCount :: Word64
 maxRefCount = 0x7FFFFFFFFFFFFFFF
 
-alloc :: Representable a => a %1 -> Pool %1 -> Rc a
+alloc :: (Representable a) => a %1 -> Pool %1 -> Rc a
 {-# INLINE alloc #-}
 alloc a0 pool =
   besides
     pool
-    ( \l ->
-        dup2 l & \(l1, l2) ->
-          (PA.allocL l1 1 1, PA.allocL l2 1 1)
-    )
+    (BiL.bimap (PA.allocL 1 1) (PA.allocL 1 1) . dup2)
     & \((PrimArray strong, PrimArray weak), pool) ->
       Box.alloc a0 pool & \box ->
         Rc (RcBox (# strong, weak, box #))
 
-set :: Representable a => a -> Rc a %1 -> Rc a
+set :: (Representable a) => a -> Rc a %1 -> Rc a
 {-# INLINE set #-}
 set a (Rc (RcBox (# strong, weak, box #))) =
   Box.set a box & \box ->
     Rc (RcBox (# strong, weak, box #))
 
 -- | __Warning__: This is non-atomic!
-modify :: Representable a => (a -> (a, b)) -> Rc a %1 -> (Ur b, Rc a)
+modify :: (Representable a) => (a -> (a, b)) -> Rc a %1 -> (Ur b, Rc a)
 {-# INLINE modify #-}
 modify f (Rc (RcBox (# strong, weak, box #))) =
   Box.modify f box & \(urb, box) ->
     (urb, Rc (RcBox (# strong, weak, box #)))
 
 -- | __Warning__: This is non-atomic!
-modify_ :: Representable a => (a -> a) -> Rc a %1 -> Rc a
+modify_ :: (Representable a) => (a -> a) -> Rc a %1 -> Rc a
 {-# INLINE modify_ #-}
 modify_ f (Rc (RcBox (# strong, weak, box #))) =
   Box.modify_ f box & \box ->
     Rc (RcBox (# strong, weak, box #))
 
-deref :: Representable a => Rc a %1 -> (Ur a, Rc a)
+deref :: (Representable a) => Rc a %1 -> (Ur a, Rc a)
 {-# INLINE deref #-}
 deref (Rc (RcBox (# strong, weak, box #))) =
   Box.get box & \(ura, box) ->
     (ura, Rc (RcBox (# strong, weak, box #)))
 
 -- | Tries to deconstruct reference-coutned cell and deallocate heap, if there is only one 'Rc'.
-deconstruct :: Representable a => Rc a %1 -> Either (Rc a) a
+deconstruct :: (Representable a) => Rc a %1 -> Either (Rc a) a
 {-# INLINE deconstruct #-}
 deconstruct = L.bimap id Box.deconstruct . toBox
 

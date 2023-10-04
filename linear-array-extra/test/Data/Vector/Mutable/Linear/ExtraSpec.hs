@@ -18,12 +18,12 @@ module Data.Vector.Mutable.Linear.ExtraSpec (
   test_slice,
 ) where
 
-import Data.Alloc.Linearly.Token (linearly)
 import qualified Data.Functor.Linear as D
 import Data.Unrestricted.Linear (unur)
 import qualified Data.Vector as V
 import qualified Data.Vector.Mutable.Linear.Extra as LV
 import Linear.Array.Extra.TestUtils
+import Linear.Witness.Token (linearly)
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F
 import Test.Falsify.Predicate ((.$))
@@ -47,7 +47,7 @@ test_constantL =
           F.assert $
             P.eq
               .$ ("constant", unur (LV.constant len x LV.freeze))
-              .$ ("constantL", unur (linearly \l -> LV.freeze (LV.constantL l len x)))
+              .$ ("constantL", unur (linearly PL.$ LV.freeze PL.. LV.constantL len x))
     ]
 
 test_constant :: TestTree
@@ -109,7 +109,7 @@ test_fromListL =
           (_len, xs) <- genLenList g
           F.assert $
             P.eq
-              .$ ("fromListL", unur (linearly \l -> LV.freeze PL.$ LV.fromListL l xs))
+              .$ ("fromListL", unur (linearly PL.$ \l -> LV.freeze PL.$ LV.fromListL xs l))
               .$ ("fromList", V.fromList xs)
     ]
 
@@ -165,7 +165,7 @@ test_push =
                , unur PL.$ linearly \l ->
                   distribUr
                     ( LV.freeze
-                        D.<$> LV.pop (LV.push x (LV.fromListL l xs))
+                        D.<$> LV.pop (LV.push x (LV.fromListL xs l))
                     )
                )
     ]
@@ -188,7 +188,7 @@ test_pop =
                , unur PL.$ linearly \l ->
                   distribUr
                     ( LV.freeze
-                        D.<$> LV.pop (LV.fromListL l xs)
+                        D.<$> LV.pop (LV.fromListL xs l)
                     )
                )
     ]
@@ -236,7 +236,7 @@ checkMapMaybe tgt g = do
          , unur PL.$
             linearly \l ->
               LV.freeze PL.$
-                LV.mapMaybe (LV.fromListL l xs) f
+                LV.mapMaybe (LV.fromListL xs l) f
          )
 
 checkFilter ::
@@ -259,7 +259,7 @@ checkFilter g = do
          , unur PL.$
             linearly \l ->
               LV.freeze PL.$
-                LV.filter (LV.fromListL l xs) p
+                LV.filter (LV.fromListL xs l) p
          )
 
 checkPushSnoc :: (Eq a, Show a) => Gen a -> Property' String ()
@@ -270,10 +270,10 @@ checkPushSnoc g = do
     P.expect (V.fromList xs `V.snoc` x)
       .$ ( "actual"
          , unur PL.$
-            linearly \l ->
+            linearly PL.$ \l ->
               LV.freeze PL.$
                 LV.push x PL.$
-                  LV.fromListL l xs
+                  LV.fromListL xs l
          )
 
 test_slice :: TestTree
@@ -287,8 +287,10 @@ test_slice =
         F.assert $
           P.expect sliced
             .$ ( "actual"
-               , unur PL.$ linearly \l ->
-                  LV.freeze PL.$
-                    LV.slice offset range (LV.fromListL l xs)
+               , unur PL.$
+                  linearly PL.$
+                    LV.freeze
+                      PL.. LV.slice offset range
+                      PL.. LV.fromListL xs
                )
     ]

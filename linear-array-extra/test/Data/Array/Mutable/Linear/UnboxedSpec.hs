@@ -20,15 +20,16 @@ module Data.Array.Mutable.Linear.UnboxedSpec (
   test_serialAccess,
 ) where
 
-import Data.Alloc.Linearly.Token (linearly)
 import qualified Data.Array.Mutable.Linear.Unboxed as LUA
 import Data.Functor ((<&>))
 import Data.List (findIndex)
 import Data.Maybe
+import qualified Data.Tuple.Linear as TL
 import Data.Unrestricted.Linear (unur)
 import qualified Data.Unrestricted.Linear as Ur
 import qualified Data.Vector.Unboxed as U
 import Linear.Array.Extra.TestUtils
+import Linear.Witness.Token (linearly)
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F
 import Test.Falsify.Predicate ((.$))
@@ -101,8 +102,9 @@ test_unsafeAllocL =
           F.assert $
             P.expect (U.replicate len x)
               .$ ( "unsafeAlloc"
-                 , unur PL.$ linearly \l ->
-                    LUA.freeze PL.$ LUA.fill x PL.$ LUA.unsafeAllocL l len
+                 , unur PL.$
+                    linearly PL.$
+                      LUA.freeze PL.. LUA.fill x PL.. LUA.unsafeAllocL len
                  )
     ]
 
@@ -132,7 +134,7 @@ test_fromListL =
           label "length" [classifyRangeBy 16 $ length xs]
           F.assert $
             P.eq
-              .$ ("alloc", unur (linearly \l -> LUA.freeze PL.$ LUA.fromListL l xs))
+              .$ ("alloc", unur (linearly PL.$ LUA.freeze PL.. LUA.fromListL xs))
               .$ ("replicate", U.fromList xs)
     ]
 
@@ -184,8 +186,9 @@ test_fill =
             F.assert $
               P.expect (U.replicate len x)
                 .$ ( "filled"
-                   , unur PL.$ linearly \l ->
-                      LUA.freeze (LUA.fill x (LUA.unsafeAllocL l len))
+                   , unur PL.$
+                      linearly PL.$
+                        LUA.freeze PL.. LUA.fill x PL.. LUA.unsafeAllocL len
                    )
         , testWithGens "fromListL" \g -> do
             xs <- gen $ F.list (F.between (0, 128)) g
@@ -195,8 +198,9 @@ test_fill =
             F.assert $
               P.expect (U.replicate len x)
                 .$ ( "filled"
-                   , unur PL.$ linearly \l ->
-                      LUA.freeze (LUA.fill x (LUA.fromListL l xs))
+                   , unur PL.$
+                      linearly PL.$
+                        LUA.freeze PL.. LUA.fill x PL.. LUA.fromListL xs
                    )
         ]
     ]
@@ -249,8 +253,9 @@ testMapLikeFor mapLike arg ret = do
   F.assert $
     P.expect (U.map f $ U.fromList xs)
       .$ ( "mapped"
-         , unur PL.$ linearly \l ->
-            LUA.freeze (mapLike f (LUA.fromListL l xs))
+         , unur PL.$
+            linearly PL.$
+              LUA.freeze PL.. mapLike f PL.. LUA.fromListL xs
          )
 
 test_findIndex :: TestTree
@@ -270,8 +275,9 @@ testFindIndex argG = do
   F.assert $
     P.expect resl
       .$ ( "linear"
-         , unur PL.$ linearly \l ->
-            fst' (LUA.findIndex p (LUA.fromListL l xs))
+         , unur PL.$
+            linearly PL.$
+              TL.fst PL.. LUA.findIndex p PL.. LUA.fromListL xs
          )
 
 test_unsafeResize :: TestTree
@@ -297,8 +303,8 @@ checkUnsafeResizeSame g = do
   F.assert $
     P.satisfies ("pair", uncurry (==))
       .$ ( "paired"
-         , unur PL.$ linearly \l ->
-            PL.dup2 (LUA.fromListL l xs) PL.& \(ls, rs) ->
+         , unur PL.$ linearly PL.$ \l ->
+            PL.dup2 (LUA.fromListL xs l) PL.& \(ls, rs) ->
               Ur.lift2
                 (,)
                 (LUA.freeze ls)
@@ -314,8 +320,9 @@ checkUnsafeResizeShorter g = do
   F.assert $
     P.expect (U.take smal $ U.fromList xs)
       .$ ( "generated"
-         , unur PL.$ linearly \l ->
-            LUA.freeze PL.$ LUA.unsafeResize smal PL.$ LUA.fromListL l xs
+         , unur PL.$
+            linearly PL.$
+              LUA.freeze PL.. LUA.unsafeResize smal PL.. LUA.fromListL xs
          )
 
 checkUnsafeResizeLarger :: (Show a, Eq a, U.Unbox a) => Gen a -> Property ()
@@ -327,14 +334,18 @@ checkUnsafeResizeLarger g = do
   F.assert $
     P.expect (len + growth)
       .$ ( "actual size"
-         , U.length $ unur PL.$ linearly \l ->
-            LUA.freeze PL.$ LUA.unsafeResize (len + growth) PL.$ LUA.fromListL l xs
+         , U.length $
+            unur PL.$
+              linearly PL.$
+                LUA.freeze PL.. LUA.unsafeResize (len + growth) PL.. LUA.fromListL xs
          )
   F.assert $
     P.expect (U.fromList xs)
       .$ ( "actual initial segment"
-         , U.take len $ unur PL.$ linearly \l ->
-            LUA.freeze PL.$ LUA.unsafeResize (len + growth) PL.$ LUA.fromListL l xs
+         , U.take len $
+            unur PL.$
+              linearly PL.$
+                LUA.freeze PL.. LUA.unsafeResize (len + growth) PL.. LUA.fromListL xs
          )
 
 test_unsafeSlice :: TestTree
@@ -350,8 +361,9 @@ checkUnsafeSlice g = do
   F.assert $
     P.expect (U.unsafeSlice offset range $ U.fromList xs)
       .$ ( "actual slice"
-         , unur PL.$ linearly \l ->
-            LUA.freeze PL.$ snd' PL.$ LUA.unsafeSlice offset range PL.$ LUA.fromListL l xs
+         , unur PL.$
+            linearly PL.$
+              LUA.freeze PL.. snd' PL.. LUA.unsafeSlice offset range PL.. LUA.fromListL xs
          )
 
 test_serialAccess :: TestTree
