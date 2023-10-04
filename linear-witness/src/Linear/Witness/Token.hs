@@ -16,18 +16,18 @@ Thisis just a tentative workaround until Linearly Qualified Types gets implement
 -}
 module Linear.Witness.Token (Linearly (), linearly, besides) where
 
-import Linear.Witness.Token.Internal
-import Linear.Witness.Token.Unsafe (HasLinearWitness, linearWitness)
 import Data.Unrestricted.Linear
 import GHC.Base (noinline)
+import Linear.Witness.Token.Internal
+import Linear.Witness.Token.Unsafe (HasLinearWitness, linearWitness)
 import Prelude.Linear ((&))
 
 linearly :: (Linearly %1 -> Ur a) %1 -> Ur a
 {-# NOINLINE linearly #-}
 linearly k = k Linearly
 
-besides :: HasLinearWitness a => a %1 -> (Linearly %1 -> b) %1 -> (b, a)
--- NOTE: For some (unclear) reasons, those NOINLINE/noinlibe are needed
+besides :: (HasLinearWitness a) => a %1 -> (Linearly %1 -> b) %1 -> (b, a)
+-- NOTE: For some (unclear) reasons, those NOINLINE/noinline are needed
 -- to prevent the internal state float out when called more than twice
 {-# NOINLINE besides #-}
 besides wit f =
