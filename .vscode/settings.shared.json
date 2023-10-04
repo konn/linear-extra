@@ -1,0 +1,11 @@
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "cmd": "bash -c 'find . -name 'package.yaml' | while read -r FILE; do hpack \"${FILE}\"; done'",
+        "isAsync": true,
+        "match": "(package\\.yaml|\\.l?hs)$"
+      }
+    ]
+  }
+}
