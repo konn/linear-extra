@@ -48,6 +48,8 @@ test-suite linear-witness-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Data.Array.Mutable.Linear.WitnessSpec
+      Data.Vector.Mutable.Linear.WitnessSpec
       Paths_linear_witness_test_utils
   hs-source-dirs:
       test

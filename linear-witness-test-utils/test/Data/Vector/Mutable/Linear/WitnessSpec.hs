@@ -3,13 +3,14 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Data.Vector.Mutable.Linear.ExtraSpec (
+module Data.Vector.Mutable.Linear.WitnessSpec (
   test_constant,
   test_constantL,
   test_fromListL,
   test_fromList,
   test_empty,
   test_emptyL,
+  test_doubleAlloc,
   test_serialAccess,
   test_push,
   test_pop,
@@ -21,9 +22,10 @@ module Data.Vector.Mutable.Linear.ExtraSpec (
 import qualified Data.Functor.Linear as D
 import Data.Unrestricted.Linear (unur)
 import qualified Data.Vector as V
-import qualified Data.Vector.Mutable.Linear.Extra as LV
-import Linear.Array.Extra.TestUtils
+import qualified Data.Vector.Mutable.Linear as LV
+import qualified Data.Vector.Mutable.Linear.Witness as LV
 import Linear.Witness.Token (linearly)
+import Linear.Witness.Token.TestUtils
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F
 import Test.Falsify.Predicate ((.$))
@@ -293,4 +295,13 @@ test_slice =
                       PL.. LV.slice offset range
                       PL.. LV.fromListL xs
                )
+    ]
+
+test_doubleAlloc :: TestTree
+test_doubleAlloc =
+  testGroup
+    "can be allocated inside linearly twice"
+    [ testDoubleAlloc (F.int $ F.between (-10, 10)) LV.fromListL LV.freeze
+    , testDoubleAlloc (F.bool True) LV.fromListL LV.freeze
+    , testDoubleAlloc (doubleG 8) LV.fromListL LV.freeze
     ]

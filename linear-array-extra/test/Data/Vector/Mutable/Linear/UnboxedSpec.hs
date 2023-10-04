@@ -11,6 +11,7 @@ module Data.Vector.Mutable.Linear.UnboxedSpec (
   test_empty,
   test_emptyL,
   test_fromArray,
+  test_doubleAlloc,
   test_serialAccess,
   test_push,
   test_pop,
@@ -453,4 +454,13 @@ test_slice =
                   LUV.freeze PL.$
                     LUV.slice offset range (LUV.fromListL xs l)
                )
+    ]
+
+test_doubleAlloc :: TestTree
+test_doubleAlloc =
+  testGroup
+    "can be allocated inside linearly twice"
+    [ testDoubleAlloc (F.int $ F.between (-10, 10)) LUV.fromListL LUV.freeze
+    , testDoubleAlloc (F.bool True) LUV.fromListL LUV.freeze
+    , testDoubleAlloc (doubleG 8) LUV.fromListL LUV.freeze
     ]

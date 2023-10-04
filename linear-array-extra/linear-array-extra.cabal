@@ -82,12 +82,10 @@ test-suite linear-array-extra-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Data.Array.Mutable.Linear.ExtraSpec
       Data.Array.Mutable.Linear.UnboxedSpec
       Data.Array.Polarized.Pull.ExtraSpec
       Data.Array.Polarized.Push.ExtraSpec
       Data.AtomicCounter.LinearSpec
-      Data.Vector.Mutable.Linear.ExtraSpec
       Data.Vector.Mutable.Linear.UnboxedSpec
       Linear.Array.Extra.TestUtils
       Paths_linear_array_extra

@@ -1,17 +1,19 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE LinearTypes #-}
 
-module Data.Array.Mutable.Linear.ExtraSpec (
+module Data.Array.Mutable.Linear.WitnessSpec (
   test_allocL,
   test_fromListL,
   test_serialAccess,
+  test_doubleAlloc,
 ) where
 
-import qualified Data.Array.Mutable.Linear.Extra as LA
+import qualified Data.Array.Mutable.Linear as LA
+import qualified Data.Array.Mutable.Linear.Witness as LA
 import Data.Unrestricted.Linear (unur)
 import qualified Data.Vector as V
-import Linear.Array.Extra.TestUtils
 import Linear.Witness.Token (linearly)
+import Linear.Witness.Token.TestUtils
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F
 import Test.Falsify.Predicate ((.$))
@@ -50,6 +52,15 @@ test_fromListL =
             P.eq
               .$ ("alloc", unur (linearly PL.$ LA.freeze PL.. LA.fromListL xs))
               .$ ("replicate", V.fromList xs)
+    ]
+
+test_doubleAlloc :: TestTree
+test_doubleAlloc =
+  testGroup
+    "can be allocated inside linearly twice"
+    [ testDoubleAlloc (F.int $ F.between (-10, 10)) LA.fromListL LA.freeze
+    , testDoubleAlloc (F.bool True) LA.fromListL LA.freeze
+    , testDoubleAlloc (doubleG 8) LA.fromListL LA.freeze
     ]
 
 test_serialAccess :: TestTree

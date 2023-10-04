@@ -18,6 +18,7 @@ module Data.Array.Mutable.Linear.UnboxedSpec (
   test_unsafeResize,
   test_unsafeSlice,
   test_serialAccess,
+  test_doubleAlloc,
 ) where
 
 import qualified Data.Array.Mutable.Linear.Unboxed as LUA
@@ -347,6 +348,15 @@ checkUnsafeResizeLarger g = do
               linearly PL.$
                 LUA.freeze PL.. LUA.unsafeResize (len + growth) PL.. LUA.fromListL xs
          )
+
+test_doubleAlloc :: TestTree
+test_doubleAlloc =
+  testGroup
+    "can be allocated inside linearly twice"
+    [ testDoubleAlloc (F.int $ F.between (-10, 10)) LUA.fromListL LUA.freeze
+    , testDoubleAlloc (F.bool True) LUA.fromListL LUA.freeze
+    , testDoubleAlloc (doubleG 8) LUA.fromListL LUA.freeze
+    ]
 
 test_unsafeSlice :: TestTree
 test_unsafeSlice =

@@ -7,7 +7,9 @@
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -22,6 +24,8 @@ module Linear.Witness.Token.TestUtils (
   applyArrayOps,
   applyArrayOpsL,
   checkSerialUpdateSemantics,
+  testDoubleAlloc,
+  checkDoubleAlloc,
   classifyPercent,
   testWithGens,
   genLenList,
@@ -43,7 +47,7 @@ import qualified Data.Vector.Mutable.Linear as LV
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 import GHC.Generics (Generic)
-import Linear.Witness.Token (Linearly, linearly)
+import Linear.Witness.Token (Linearly, besides, linearly)
 import Prelude.Linear (Ur (..), unur)
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F
@@ -51,7 +55,9 @@ import Test.Falsify.Predicate ((.$))
 import qualified Test.Falsify.Predicate as P
 import qualified Test.Falsify.Range as F
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Falsify (testProperty)
 import qualified Test.Tasty.Falsify as F
+import Type.Reflection (Typeable, typeRep)
 import qualified Unsafe.Linear as Unsafe
 
 classifyRangeBy :: (Show i, Integral i) => i -> i -> String
@@ -138,6 +144,40 @@ applyArrayOps = flip $ foldl' (\xs op -> applyArrayOp op xs)
 applyArrayOpsL :: (HasArrayOp a t) => [ArrayOp a] -> t %1 -> t
 {-# ANN applyArrayOpsL "HLint: ignore Avoid lambda" #-}
 applyArrayOpsL ops a = L.foldl' (\x (Ur o) -> applyArrayOp o x) a (map Ur ops)
+
+testDoubleAlloc ::
+  (Typeable a, Show a, Eq (v a), G.Vector v a, Show (v a)) =>
+  F.Gen a ->
+  ([a] -> Linearly %1 -> x) ->
+  (x %1 -> Ur (v a)) ->
+  TestTree
+testDoubleAlloc (g :: F.Gen a) fromLst frz =
+  testProperty (show $ typeRep @a) $
+    checkDoubleAlloc g fromLst frz
+
+checkDoubleAlloc ::
+  (Show a, Eq (v a), G.Vector v a, Show (v a)) =>
+  F.Gen a ->
+  ([a] -> Linearly %1 -> x) ->
+  (x %1 -> Ur (v a)) ->
+  F.Property ()
+checkDoubleAlloc g fromLst frz = do
+  len1 <- F.gen $ F.integral $ F.between (1, 10)
+  len2 <- F.gen $ F.integral $ F.between (1, 10)
+  F.label "length1" [classifyRangeBy 16 len1]
+  F.label "length2" [classifyRangeBy 16 len2]
+  xs <- F.gen $ F.list (F.between (len1, len1)) g
+  ys <- F.gen $ F.list (F.between (len2, len2)) g
+  F.assert $
+    P.expect (G.fromList xs, G.fromList ys)
+      .$ ( "actual"
+         , unur
+            ( linearly \l ->
+                besides l (fromLst xs) PL.& \(xs', l') ->
+                  fromLst ys l' PL.& \ys' ->
+                    distribUr (frz xs', frz ys')
+            )
+         )
 
 checkSerialUpdateSemantics ::
   (Show a, F.Function a, Eq (v a), HasArrayOp a (v a), G.Vector v a, HasArrayOp a x, Show (v a)) =>
