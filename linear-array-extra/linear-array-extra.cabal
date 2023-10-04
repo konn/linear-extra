@@ -106,6 +106,7 @@ test-suite linear-array-extra-test
     , linear-base
     , linear-generics
     , linear-witness
+    , linear-witness-test-utils
     , primitive
     , tasty
     , tasty-hunit
