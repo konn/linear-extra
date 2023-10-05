@@ -58,9 +58,9 @@ alloc n x f
   | otherwise = case runRW# (unIO $ MU.replicate n x) of
       (# _, mu #) -> f (UArray mu)
 
-allocL :: (HasCallStack, U.Unbox a) => Linearly %1 -> Int -> a -> UArray a
+allocL :: (HasCallStack, U.Unbox a) => Int -> a -> Linearly %1 -> UArray a
 {-# NOINLINE allocL #-}
-allocL = GHC.noinline \l n x ->
+allocL = GHC.noinline \n x l ->
   if n < 0
     then error ("UArray.alloc: Negative length: " <> show n) l
     else
