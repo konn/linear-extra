@@ -21,11 +21,7 @@ import qualified Prelude as P
 allocL :: Int -> a -> Linearly %1 -> Array a
 allocL i a l = Array (Unlifted.allocL i a l)
 
-fromListL ::
-  (HasCallStack) =>
-  [a] ->
-  Linearly %1 ->
-  Array a
+fromListL :: (HasCallStack) => [a] -> Linearly %1 -> Array a
 fromListL (list :: [a]) =
   insert
     . allocL

@@ -68,7 +68,7 @@ test_allocL =
           F.assert $
             P.eq
               .$ ("alloc", unur (LUA.alloc len x LUA.freeze))
-              .$ ("allocL", unur (linearly \l -> LUA.freeze (LUA.allocL l len x)))
+              .$ ("allocL", unur (linearly PL.$ LUA.freeze PL.. LUA.allocL len x))
     ]
 
 test_unsafeAlloc :: TestTree
@@ -154,7 +154,7 @@ test_set =
           collect "x == y" [show $ x == y]
           F.assert $
             P.expect x
-              .$ ("alloc", unur (linearly \l -> LUA.freeze PL.$ LUA.set i x (LUA.allocL l len y)) U.! i)
+              .$ ("alloc", unur (linearly PL.$ LUA.freeze PL.. LUA.set i x PL.. LUA.allocL len y) U.! i)
     , testWithGens
         "unur (linearly \\l -> fst' (get i (set i x (allocL l y)))) == x"
         \g -> do
@@ -168,8 +168,8 @@ test_set =
             P.expect x
               .$ ( "alloc"
                  , unur
-                    ( linearly \l ->
-                        fst' PL.$ LUA.get i PL.$ LUA.set i x (LUA.allocL l len y)
+                    ( linearly PL.$
+                        fst' PL.. LUA.get i PL.. LUA.set i x PL.. LUA.allocL len y
                     )
                  )
     ]
