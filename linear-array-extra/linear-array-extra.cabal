@@ -1,0 +1,112 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:               linear-array-extra
+version:            0.1.0.0
+description:        Please see the README on GitHub at <https://github.com/konn/linear-array-extra#readme>
+homepage:           https://github.com/konn/linear-array-extra#readme
+bug-reports:        https://github.com/konn/linear-array-extra/issues
+author:             Hiromi ISHII
+maintainer:         konn.jinro_at_gmail.com
+copyright:          2023 (c) Hiromi ISHII
+license:            BSD3
+license-file:       LICENSE
+build-type:         Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/konn/linear-array-extra
+
+library
+  exposed-modules:
+      Data.Array.Destination.Unboxed
+      Data.Array.Destination.Vector.Generic
+      Data.Array.Mutable.Linear.Class
+      Data.Array.Mutable.Linear.Extra
+      Data.Array.Mutable.Linear.Primitive
+      Data.Array.Mutable.Linear.Storable.Internal
+      Data.Array.Mutable.Linear.Unboxed
+      Data.Array.Mutable.Linear.Unboxed.Internal
+      Data.Array.Mutable.Unlifted.Linear.Extra
+      Data.Array.Mutable.Unlifted.Linear.Primitive
+      Data.Array.Polarized.Pull.Extra
+      Data.Array.Polarized.Push.Extra
+      Data.AtomicCounter.Linear
+      Data.Ref.Linear.ReferenceCount.ThreadUnsafe
+      Data.Unrestricted.Linear.Orphans.Vector
+      Data.Vector.Mutable.Linear.Extra
+      Data.Vector.Mutable.Linear.Generic
+      Data.Vector.Mutable.Linear.Unboxed
+      Foreign.Marshal.Pure.Extra
+  other-modules:
+      Foreign.Atomic.Internal
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  c-sources:
+      cbits/atomic.c
+  build-depends:
+      base >=4.7 && <5
+    , ghc-prim
+    , linear-base >=0.2
+    , linear-generics
+    , linear-witness
+    , primitive
+    , vector
+  default-language: Haskell2010
+
+executable linear-array-extra-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_linear_array_extra
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , linear-array-extra
+    , linear-base >=0.2
+    , linear-generics
+    , linear-witness
+    , primitive
+    , vector
+  default-language: Haskell2010
+
+test-suite linear-array-extra-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Data.Array.Mutable.Linear.UnboxedSpec
+      Data.Array.Polarized.Pull.ExtraSpec
+      Data.Array.Polarized.Push.ExtraSpec
+      Data.AtomicCounter.LinearSpec
+      Data.Vector.Mutable.Linear.UnboxedSpec
+      Linear.Array.Extra.TestUtils
+      Paths_linear_array_extra
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N -O2
+  build-tool-depends:
+      tasty-discover:tasty-discover
+  build-depends:
+      base >=4.7 && <5
+    , containers
+    , dlist
+    , falsify
+    , foldl
+    , linear-array-extra
+    , linear-base
+    , linear-generics
+    , linear-witness
+    , linear-witness-test-utils
+    , primitive
+    , tasty
+    , tasty-hunit
+    , vector
+  default-language: Haskell2010

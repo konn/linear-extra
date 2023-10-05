@@ -39,7 +39,12 @@ fi
 
 echo "[*] Places artifacts into the correct place"
 
-${CABAL_PLAN} list-bins | grep linear-array-extra | while read -r TARG; do
+local_pkgs=()
+while read -r TARG; do
+    local_pkgs+=("-e" "$(basename "${TARG%*.cabal}")");
+done < <(find . -type f -not -path '*/dist-newstyle/*' -name '*.cabal')
+
+${CABAL_PLAN} list-bins | grep "${local_pkgs[@]}" | while read -r TARG; do
     COMPONENT=$(echo "${TARG}" | awk '{ print $1 }')
     BIN=$(echo "${TARG}" | awk '{ print $2 }')
     TYPE=$(echo "${COMPONENT}" | cut -d':' -f2)

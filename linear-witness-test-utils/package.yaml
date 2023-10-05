@@ -1,0 +1,62 @@
+name:                linear-witness-test-utils
+version:             0.1.0.0
+github:              "konn/linear-witness-test"
+license:             BSD3
+author:              "Hiromi ISHII"
+maintainer:          "konn.jinro_at_gmail.com"
+copyright:           "2023 (c) Hiromi ISHII"
+
+extra-source-files:
+- README.md
+- CHANGELOG.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/konn/linear-witness-test#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- linear-base
+- linear-witness
+- containers
+- dlist
+- falsify
+- foldl
+- linear-base
+- tasty
+- tasty-hunit
+- vector
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wmissing-export-lists
+- -Wmissing-home-modules
+- -Wpartial-fields
+- -Wredundant-constraints
+
+library:
+  source-dirs: src
+
+tests:
+  linear-witness-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -O2
+    build-tools:
+    - tasty-discover
+    dependencies:
+    - linear-witness
+    - linear-witness-test-utils
