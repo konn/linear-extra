@@ -12,6 +12,7 @@ module Data.Vector.Mutable.Linear.UnboxedSpec (
   test_emptyL,
   test_fromArray,
   test_doubleAlloc,
+  test_doubleAlloc_empty,
   test_serialAccess,
   test_push,
   test_pop,
@@ -470,4 +471,19 @@ test_doubleAlloc =
     , testDoubleAlloc (doubleG 8) (F.int $ F.between (-10, 10)) LUV.fromListL LUV.fromListL (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
     , testDoubleAlloc (doubleG 8) (F.bool True) LUV.fromListL LUV.fromListL (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
     , testDoubleAlloc (doubleG 8) (doubleG 8) LUV.fromListL LUV.fromListL (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    ]
+
+test_doubleAlloc_empty :: TestTree
+test_doubleAlloc_empty =
+  testGroup
+    "can be allocated inside linearly twice (empty)"
+    [ testDoubleAllocSnoc (F.int $ F.between (-10, 10)) (F.int $ F.between (-10, 10)) LUV.emptyL LUV.emptyL LUV.push LUV.push (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAllocSnoc (F.int $ F.between (-10, 10)) (F.bool True) LUV.emptyL LUV.emptyL LUV.push LUV.push (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAllocSnoc (F.int $ F.between (-10, 10)) (doubleG 8) LUV.emptyL LUV.emptyL LUV.push LUV.push (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAllocSnoc (F.bool True) (F.int $ F.between (-10, 10)) LUV.emptyL LUV.emptyL LUV.push LUV.push (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAllocSnoc (F.bool True) (F.bool True) LUV.emptyL LUV.emptyL LUV.push LUV.push (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAllocSnoc (F.bool True) (doubleG 8) LUV.emptyL LUV.emptyL LUV.push LUV.push (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAllocSnoc (doubleG 8) (F.int $ F.between (-10, 10)) LUV.emptyL LUV.emptyL LUV.push LUV.push (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAllocSnoc (doubleG 8) (F.bool True) LUV.emptyL LUV.emptyL LUV.push LUV.push (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
+    , testDoubleAllocSnoc (doubleG 8) (doubleG 8) LUV.emptyL LUV.emptyL LUV.push LUV.push (Ur.lift U.toList PL.. LUV.freeze) (Ur.lift U.toList PL.. LUV.freeze)
     ]

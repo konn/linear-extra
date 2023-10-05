@@ -17,6 +17,7 @@ module Data.Vector.Mutable.Linear.WitnessSpec (
   test_mapMaybe,
   test_filter,
   test_slice,
+  test_doubleAlloc_empty,
 ) where
 
 import qualified Data.Functor.Linear as D
@@ -311,4 +312,19 @@ test_doubleAlloc =
     , testDoubleAlloc (doubleG 8) (F.int $ F.between (-10, 10)) LV.fromListL LV.fromListL (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
     , testDoubleAlloc (doubleG 8) (F.bool True) LV.fromListL LV.fromListL (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
     , testDoubleAlloc (doubleG 8) (doubleG 8) LV.fromListL LV.fromListL (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    ]
+
+test_doubleAlloc_empty :: TestTree
+test_doubleAlloc_empty =
+  testGroup
+    "can be allocated inside linearly twice (empty)"
+    [ testDoubleAllocSnoc (F.int $ F.between (-10, 10)) (F.int $ F.between (-10, 10)) LV.emptyL LV.emptyL LV.push LV.push (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAllocSnoc (F.int $ F.between (-10, 10)) (F.bool True) LV.emptyL LV.emptyL LV.push LV.push (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAllocSnoc (F.int $ F.between (-10, 10)) (doubleG 8) LV.emptyL LV.emptyL LV.push LV.push (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAllocSnoc (F.bool True) (F.int $ F.between (-10, 10)) LV.emptyL LV.emptyL LV.push LV.push (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAllocSnoc (F.bool True) (F.bool True) LV.emptyL LV.emptyL LV.push LV.push (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAllocSnoc (F.bool True) (doubleG 8) LV.emptyL LV.emptyL LV.push LV.push (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAllocSnoc (doubleG 8) (F.int $ F.between (-10, 10)) LV.emptyL LV.emptyL LV.push LV.push (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAllocSnoc (doubleG 8) (F.bool True) LV.emptyL LV.emptyL LV.push LV.push (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
+    , testDoubleAllocSnoc (doubleG 8) (doubleG 8) LV.emptyL LV.emptyL LV.push LV.push (Ur.lift V.toList PL.. LV.freeze) (Ur.lift V.toList PL.. LV.freeze)
     ]
