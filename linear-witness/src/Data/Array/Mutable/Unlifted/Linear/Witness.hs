@@ -21,7 +21,9 @@ import qualified Prelude as P
 
 allocL :: Int -> a -> Linearly %1 -> Array# a
 {-# ANN allocL "HLint: ignore Avoid lambda" #-}
-allocL (GHC.I# s) a = Unsafe.toLinear \_ ->
+-- We need 'noinline' here, otherwise GHC will fuse allocL away and
+-- unsound allocation can occur when multiple allocation done in serial!
+allocL = GHC.noinline \(GHC.I# s) a -> Unsafe.toLinear \_ ->
   GHC.runRW# P.$ \st ->
     case GHC.newArray# s a st of
       (# _, arr #) -> unsafeCoerce# arr

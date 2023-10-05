@@ -2,9 +2,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
@@ -24,12 +26,12 @@ import Prelude.Linear ((&))
 
 linearly :: (Linearly %1 -> Ur a) %1 -> Ur a
 {-# NOINLINE linearly #-}
-linearly k = k Linearly
+linearly = noinline \k -> k (noinline Linearly)
 
 besides :: (HasLinearWitness a) => a %1 -> (Linearly %1 -> b) %1 -> (b, a)
 -- NOTE: For some (unclear) reasons, those NOINLINE/noinline are needed
 -- to prevent the internal state float out when called more than twice
 {-# NOINLINE besides #-}
-besides wit f =
-  noinline linearWitness wit & \(wit, lin) ->
+besides = noinline \wit f ->
+  linearWitness wit & \(wit, lin) ->
     (f lin, wit)

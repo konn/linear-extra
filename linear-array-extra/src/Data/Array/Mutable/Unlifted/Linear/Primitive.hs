@@ -58,7 +58,7 @@ infixr 0 `lseq`
 
 allocL :: forall a. (Prim a) => Int -> a -> Linearly %1 -> PrimArray# a
 {-# NOINLINE allocL #-}
-allocL (GHC.I# n#) a tok =
+allocL = GHC.noinline \(GHC.I# n#) a tok ->
   let byteSize# = n# GHC.*# sizeOf# (undefined :: a)
       new = GHC.runRW# P.$ \s ->
         case GHC.newByteArray# byteSize# s of
@@ -89,7 +89,7 @@ unsafeAlloc (GHC.I# n#) f =
 
 -- | Allocates primitive array but WITHOUT initialisation.
 unsafeAllocL :: forall a. (Prim a) => Int -> Linearly %1 -> PrimArray# a
-unsafeAllocL (GHC.I# n#) l =
+unsafeAllocL = GHC.noinline \(GHC.I# n#) l ->
   let byteSize# = n# GHC.*# sizeOf# (undefined :: a)
       new = GHC.runRW# P.$ \s ->
         case GHC.newByteArray# byteSize# s of
@@ -106,7 +106,7 @@ fill (a :: a) = Unsafe.toLinear \(PrimArray# arr :: PrimArray# a) ->
 
 -- | _See also_: 'unsafeAllocBeside'
 allocBeside :: forall a b. (Prim a) => Int -> a -> PrimArray# b %1 -> (# PrimArray# a, PrimArray# b #)
-allocBeside (GHC.I# n#) a orig =
+allocBeside = GHC.noinline \(GHC.I# n#) a orig ->
   let new = GHC.runRW# P.$ \s ->
         case GHC.newByteArray# (n# GHC.*# sizeOf# (undefined :: a)) s of
           (# s, arr #) -> case setByteArray# arr 0# n# a s of

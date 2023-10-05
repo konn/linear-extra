@@ -43,6 +43,7 @@ import Data.Vector.Unboxed (Unbox)
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 import GHC.Exts (runRW#)
+import qualified GHC.Exts as GHC
 import GHC.IO (unIO)
 import GHC.Stack (HasCallStack)
 import Linear.Witness.Token
@@ -59,10 +60,11 @@ alloc n x f
 
 allocL :: (HasCallStack, U.Unbox a) => Linearly %1 -> Int -> a -> UArray a
 {-# NOINLINE allocL #-}
-allocL l n x
-  | n < 0 = error ("UArray.alloc: Negative length: " <> show n) l
-  | otherwise =
-      consume l & \() -> case runRW# (unIO $ MU.replicate n x) of
+allocL = GHC.noinline \l n x ->
+  if n < 0
+    then error ("UArray.alloc: Negative length: " <> show n) l
+    else
+      l `lseq` case runRW# (unIO $ MU.replicate n x) of
         (# _, mu #) -> UArray mu
 
 unsafeAllocBeside :: (U.Unbox a) => Int -> UArray b %1 -> (UArray a, UArray b)
@@ -93,10 +95,10 @@ freeze = Unsafe.toLinear \(UArray mu) ->
   case runRW# $ unIO $ U.unsafeFreeze mu of
     (# _, uv #) -> Ur uv
 
-fromVectorL :: (U.Unbox a) => Linearly %1 -> U.Vector a %1 -> UArray a
+fromVectorL :: (U.Unbox a) => U.Vector a %1 -> Linearly %1 -> UArray a
 {-# NOINLINE fromVectorL #-}
-fromVectorL l = Unsafe.toLinear \uv ->
-  case runRW# $ unIO $ U.unsafeThaw uv of
+fromVectorL = GHC.noinline $ Unsafe.toLinear \uv l ->
+  case runRW# (unIO (U.unsafeThaw uv)) of
     (# _, mu #) -> l `lseq` UArray mu
 
 fromListL :: (U.Unbox a) => [a] -> Linearly %1 -> UArray a

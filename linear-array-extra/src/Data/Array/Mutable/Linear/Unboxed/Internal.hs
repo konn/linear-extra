@@ -33,6 +33,7 @@ import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 import GHC.Base (runRW#, unIO)
 import GHC.Exts (RealWorld)
+import qualified GHC.Exts as GHC
 import Linear.Witness.Token (Linearly)
 import Linear.Witness.Token.Unsafe (HasLinearWitness)
 import Prelude.Linear
@@ -123,6 +124,6 @@ unsafeResize n = Unsafe.toLinear \(UArray arr) ->
 
 unsafeAllocL :: (U.Unbox a) => Int -> Linearly %1 -> UArray a
 {-# NOINLINE unsafeAllocL #-}
-unsafeAllocL n l =
+unsafeAllocL = GHC.noinline \n l ->
   l `lseq` case runRW# (unIO $ MU.unsafeNew n) of
     (# _, mu #) -> UArray mu

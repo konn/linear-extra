@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
@@ -34,6 +35,7 @@ import Foreign.Marshal.Pure
 import GHC.Exts
 import GHC.TypeLits
 import Linear.Witness.Token.Internal
+import Prelude.Linear.Unsatisfiable (Unsatisfiable)
 import qualified Streaming.Linear as S
 import qualified System.IO.Linear as L
 import System.IO.Resource.Linear (RIO)
@@ -41,13 +43,13 @@ import System.IO.Resource.Linear (RIO)
 type HasLinearWitness :: TYPE rep -> Constraint
 class HasLinearWitness a
 
+{- HLINT ignore "Use tuple-section" -}
+
 linearWitness :: (HasLinearWitness a) => a %1 -> (a, Linearly)
-{-# NOINLINE linearWitness #-}
-linearWitness = noinline (,Linearly)
+linearWitness = (,Linearly)
 
 linearWitness# :: forall (a :: TYPE UnliftedRep). (HasLinearWitness a) => a %1 -> (# a, Linearly #)
-{-# NOINLINE linearWitness# #-}
-linearWitness# = noinline (# ,Linearly #)
+linearWitness# = (# ,Linearly #)
 
 deriving anyclass instance HasLinearWitness Linearly
 
@@ -68,46 +70,46 @@ deriving anyclass instance HasLinearWitness Pool
 deriving anyclass instance HasLinearWitness (Box a)
 
 -- Non-instances
-instance (TypeError ('Text "Pull Array cannot have linear witness (fromFunction and singleton violate the invariant)")) => HasLinearWitness (Pull.Array a)
+instance (Unsatisfiable ('Text "Pull Array cannot have linear witness (fromFunction and singleton violate the invariant)")) => HasLinearWitness (Pull.Array a)
 
-instance (TypeError ('Text "Push Array cannot have linear witness (make and singleton violate the invariant)")) => HasLinearWitness (Push.Array a)
+instance (Unsatisfiable ('Text "Push Array cannot have linear witness (make and singleton violate the invariant)")) => HasLinearWitness (Push.Array a)
 
 instance
-  ( TypeError ('ShowType (V n a) ':<>: 'Text " cannot have linear witness (empty violates the invariant)")
+  ( Unsatisfiable ('ShowType (V n a) ':<>: 'Text " cannot have linear witness (empty violates the invariant)")
   ) =>
   HasLinearWitness (V n a)
 
 instance
-  ( TypeError ('ShowType (S.Stream f m a) ':<>: 'Text " cannot have linear witness (delay violates the invariant)")
+  ( Unsatisfiable ('ShowType (S.Stream f m a) ':<>: 'Text " cannot have linear witness (delay violates the invariant)")
   ) =>
   HasLinearWitness (S.Stream f m a)
 
 instance
-  ( TypeError ('ShowType [a] ':<>: 'Text " cannot have linear witness (pure violates the invariant)")
+  ( Unsatisfiable ('ShowType [a] ':<>: 'Text " cannot have linear witness (pure violates the invariant)")
   ) =>
   HasLinearWitness [a]
 
 instance
-  ( TypeError ('ShowType (Ur a) ':<>: 'Text " cannot have linear witness (pure violates the invariant)")
+  ( Unsatisfiable ('ShowType (Ur a) ':<>: 'Text " cannot have linear witness (pure violates the invariant)")
   ) =>
   HasLinearWitness (Ur a)
 
 instance
-  ( TypeError ('ShowType (Maybe a) ':<>: 'Text " cannot have linear witness (pure violates the invariant)")
+  ( Unsatisfiable ('ShowType (Maybe a) ':<>: 'Text " cannot have linear witness (pure violates the invariant)")
   ) =>
   HasLinearWitness (Maybe a)
 
 instance
-  ( TypeError ('ShowType (Either a b) ':<>: 'Text " cannot have linear witness (pure violates the invariant)")
+  ( Unsatisfiable ('ShowType (Either a b) ':<>: 'Text " cannot have linear witness (pure violates the invariant)")
   ) =>
   HasLinearWitness (Either a b)
 
 instance
-  ( TypeError ('ShowType (L.IO a) ':<>: 'Text " cannot have linear witness (pure violates the invariant)")
+  ( Unsatisfiable ('ShowType (L.IO a) ':<>: 'Text " cannot have linear witness (pure violates the invariant)")
   ) =>
   HasLinearWitness (L.IO a)
 
 instance
-  ( TypeError ('ShowType (RIO a) ':<>: 'Text " cannot have linear witness (pure violates the invariant)")
+  ( Unsatisfiable ('ShowType (RIO a) ':<>: 'Text " cannot have linear witness (pure violates the invariant)")
   ) =>
   HasLinearWitness (RIO a)

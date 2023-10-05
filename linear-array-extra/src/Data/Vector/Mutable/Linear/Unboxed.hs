@@ -127,8 +127,8 @@ fromList xs f = Array.fromList xs (f . fromArray)
 fromListL :: (U.Unbox a) => [a] -> Linearly %1 -> Vector a
 fromListL xs = fromArray . Array.fromListL xs
 
-fromVectorL :: (U.Unbox a) => Linearly %1 -> U.Vector a %1 -> Vector a
-fromVectorL l = fromArray . Array.fromVectorL l
+fromVectorL :: (U.Unbox a) => U.Vector a %1 -> Linearly %1 -> Vector a
+fromVectorL xs = fromArray . Array.fromVectorL xs
 
 fromArray :: (U.Unbox a) => UArray a %1 -> Vector a
 fromArray arr =

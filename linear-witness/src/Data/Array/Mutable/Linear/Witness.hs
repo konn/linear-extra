@@ -26,13 +26,11 @@ fromListL ::
   [a] ->
   Linearly %1 ->
   Array a
-fromListL (list :: [a]) l =
+fromListL (list :: [a]) =
   insert
-    ( allocL
-        (P.length list)
-        (error "invariant violation: unintialized array position")
-        l
-    )
+    . allocL
+      (P.length list)
+      (error "invariant violation: unintialized array position")
   where
     insert :: Array a %1 -> Array a
     insert = doWrites (P.zip list [0 ..])
