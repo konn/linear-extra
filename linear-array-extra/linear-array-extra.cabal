@@ -38,20 +38,15 @@ library
       Data.Array.Mutable.Unlifted.Linear.Primitive
       Data.Array.Polarized.Pull.Extra
       Data.Array.Polarized.Push.Extra
-      Data.AtomicCounter.Linear
-      Data.Ref.Linear.ReferenceCount.ThreadUnsafe
       Data.Unrestricted.Linear.Orphans.Vector
       Data.Vector.Mutable.Linear.Extra
       Data.Vector.Mutable.Linear.Generic
       Data.Vector.Mutable.Linear.Unboxed
-      Foreign.Marshal.Pure.Extra
   other-modules:
-      Foreign.Atomic.Internal
+      Paths_linear_array_extra
   hs-source-dirs:
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
-  c-sources:
-      cbits/atomic.c
   build-depends:
       base >=4.7 && <5
     , ghc-prim
@@ -86,7 +81,6 @@ test-suite linear-array-extra-test
       Data.Array.Mutable.Linear.UnboxedSpec
       Data.Array.Polarized.Pull.ExtraSpec
       Data.Array.Polarized.Push.ExtraSpec
-      Data.AtomicCounter.LinearSpec
       Data.Vector.Mutable.Linear.UnboxedSpec
       Linear.Array.Extra.TestUtils
       Paths_linear_array_extra
