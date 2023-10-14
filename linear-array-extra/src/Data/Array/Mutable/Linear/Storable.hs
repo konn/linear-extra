@@ -72,7 +72,7 @@ fromVectorL =
 freeze :: (Storable a) => SArray a %1 -> Ur (SV.Vector a)
 {-# NOINLINE freeze #-}
 freeze = noinline $ Unsafe.toLinear \(SArray l ptr) ->
-  case GHC.runRW# (GHC.unIO (newForeignPtr_ ptr)) of
+  case GHC.runRW# (GHC.unIO (newForeignPtr finalizerFree ptr)) of
     (# !_, fptr #) -> Ur (SV.unsafeFromForeignPtr0 fptr l)
 
 set :: (HasCallStack, Storable a) => Int -> a -> SArray a %1 -> SArray a
