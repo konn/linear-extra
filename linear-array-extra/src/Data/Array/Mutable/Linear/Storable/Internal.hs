@@ -42,7 +42,7 @@ import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
 
--- TODO: consider Pool-based variant
+-- TODO: consider Pool-based variant?
 data SArray a where
   SArray :: {-# UNPACK #-} !Int -> {-# UNPACK #-} !(Ptr a) %1 -> SArray a
   deriving anyclass (HasLinearWitness)

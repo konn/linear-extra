@@ -30,6 +30,7 @@ library
       Data.Array.Mutable.Linear.Class
       Data.Array.Mutable.Linear.Extra
       Data.Array.Mutable.Linear.Primitive
+      Data.Array.Mutable.Linear.Storable
       Data.Array.Mutable.Linear.Storable.Internal
       Data.Array.Mutable.Linear.Unboxed
       Data.Array.Mutable.Linear.Unboxed.Internal
