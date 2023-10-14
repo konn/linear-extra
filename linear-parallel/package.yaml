@@ -1,0 +1,52 @@
+name:                linear-parallel
+version:             0.1.0.0
+github:              "konn/linear-parallel"
+license:             BSD3
+author:              "Hiromi ISHII"
+maintainer:          "konn.jinro_at_gmail.com"
+copyright:           "2023 (c) Hiromi ISHII"
+
+extra-source-files:
+- README.md
+- CHANGELOG.md
+
+# Metadata used when publishing your package
+synopsis:            Parallel computation interfaces for Linear Haskell
+category:            Control
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/konn/linear-parallel#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- linear-array-extra
+- linear-base
+- linear-generics
+- linear-witness
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wmissing-export-lists
+- -Wmissing-home-modules
+- -Wpartial-fields
+- -Wredundant-constraints
+
+library:
+  source-dirs: src
+
+tests:
+  linear-parallel-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - linear-parallel
