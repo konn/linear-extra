@@ -220,7 +220,7 @@ newtype Eval a = Eval {_unEval :: LIO.IO a}
   deriving newtype (D.Functor, C.Functor, D.Applicative, C.Applicative, C.Monad)
 
 runEval :: Eval a %1 -> a
-{-# ANN runEval "HLint: ignore" #-}
+{-# ANN runEval "HLint: ignore Avoid lambda" #-}
 runEval = Unsafe.toLinear \(Eval (LIO.IO k)) ->
   case runRW# (\s -> k s) of
     (# _, a #) -> a
