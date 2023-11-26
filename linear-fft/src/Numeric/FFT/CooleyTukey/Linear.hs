@@ -80,11 +80,11 @@ fftRaw (RW r w) array =
                       forN
                         half
                         ( \k (RW r w) ->
-                            SA.get r k arr & \(Ur ek, r) ->
-                              SA.get r (half + k) arr & \(Ur ok, r) ->
+                            SA.unsafeGet r k arr & \(Ur ek, r) ->
+                              SA.unsafeGet r (half + k) arr & \(Ur ok, r) ->
                                 RW r w & \rw ->
-                                  SA.set rw k (ek + kW ^ k * ok) arr & \rw ->
-                                    SA.set rw (half + k) (ek + kW ^ (half + k) * ok) arr
+                                  SA.unsafeSet rw k (ek + kW ^ k * ok) arr & \rw ->
+                                    SA.unsafeSet rw (half + k) (ek + kW ^ (half + k) * ok) arr
                         )
                         rw
 
@@ -112,18 +112,18 @@ reverseBit (RW r w) v =
               forN
                 (m - 1)
                 ( \((+ 1) -> !i) (rTbl, rw) ->
-                    SA.get rTbl i table & \(Ur iOff, rTbl) ->
+                    SA.unsafeGet rTbl i table & \(Ur iOff, rTbl) ->
                       forN
                         i
                         ( \j (rTbl, rw) ->
-                            SA.get rTbl j table & \(Ur jOff, rTbl) ->
+                            SA.unsafeGet rTbl j table & \(Ur jOff, rTbl) ->
                               let !ji = j + iOff
                                   !ij = i + jOff
-                               in SA.swap rw ji ij v & \rw ->
+                               in SA.unsafeSwap rw ji ij v & \rw ->
                                     ( rTbl
                                     , if even n
                                         then rw
-                                        else SA.swap rw (ji + m) (ij + m) v
+                                        else SA.unsafeSwap rw (ji + m) (ij + m) v
                                     )
                         )
                         (rTbl, rw)
@@ -145,8 +145,8 @@ reverseBit (RW r w) v =
                       forN
                         l
                         ( \ !j (RW r w) ->
-                            SA.get r j table & \(Ur t, r) ->
-                              SA.set (RW r w) (l + j) (t + k) table
+                            SA.unsafeGet r j table & \(Ur t, r) ->
+                              SA.unsafeSet (RW r w) (l + j) (t + k) table
                         )
                         rw
         )
