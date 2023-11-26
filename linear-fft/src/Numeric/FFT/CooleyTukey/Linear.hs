@@ -8,6 +8,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -29,17 +30,63 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Numeric.FFT.CooleyTukey.Linear (
+  fft,
+  fftRaw,
   reverseBit,
 ) where
 
 import Data.Array.Mutable.Linear.Storable.Borrowable (RW (..), SArray, SuchThat (..))
 import qualified Data.Array.Mutable.Linear.Storable.Borrowable as SA
-import Data.Bits (bit, shiftR)
+import Data.Bits (bit, popCount, shiftR)
+import Data.Complex
 import Data.Function (fix)
+import qualified Data.Vector.Storable as S
 import GHC.Stack (HasCallStack)
-import Linear.Witness.Token (besides)
+import Linear.Witness.Token (besides, linearly)
 import Math.NumberTheory.Logarithms (intLog2)
-import Prelude.Linear
+import Prelude.Linear hiding (Num, (*), (+))
+import Prelude ((*), (+))
+
+fft :: (HasCallStack) => S.Vector (Complex Double) -> S.Vector (Complex Double)
+fft inp = unur $ linearly \l ->
+  SA.fromVectorL inp l & \(SuchThat inp rw) ->
+    SA.freeze (fftRaw rw inp) inp
+
+fftRaw :: forall s. (HasCallStack) => RW s %1 -> SArray (Complex Double) s -> RW s
+fftRaw (RW r w) array =
+  SA.size r array & \(Ur len, r) ->
+    if popCount len /= 1
+      then
+        SA.free (RW r w) array `lseq`
+          error ("Array length must be of power of two, but got: " <> show len)
+      else
+        let theta = 2 * pi / fromIntegral len
+         in reverseBit (RW r w) array & \rw ->
+              loop rw array len (cos theta) (sin theta)
+  where
+    loop :: RW n %1 -> SArray (Complex Double) n -> Int -> Double -> Double -> RW n
+    loop rw arr !n !c !s =
+      if n <= 1
+        then rw
+        else
+          SA.halve rw arr & \(SA.MkSlice sliced rwL rwR l r) ->
+            let !half = n `quot` 2
+                !dblCs = 2 * c * c - 1
+                !dblSn = 2 * s * c
+                !kW = c :+ s
+             in loop rwL l half dblCs dblSn & \rwL ->
+                  loop rwR r half dblCs dblSn & \rwR ->
+                    SA.combine sliced rwL rwR l r & \(Ur _, rw) ->
+                      forN
+                        half
+                        ( \k (RW r w) ->
+                            SA.get r k arr & \(Ur ek, r) ->
+                              SA.get r (half + k) arr & \(Ur ok, r) ->
+                                RW r w & \rw ->
+                                  SA.set rw k (ek + kW ^ k * ok) arr & \rw ->
+                                    SA.set rw (half + k) (ek + kW ^ (half + k) * ok) arr
+                        )
+                        rw
 
 forN :: Int -> (Int -> a %p -> a) -> a %p -> a
 {-# INLINE forN #-}
