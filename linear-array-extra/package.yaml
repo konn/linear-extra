@@ -26,7 +26,6 @@ dependencies:
 - linear-generics
 - linear-witness
 - primitive
-- some
 
 ghc-options:
 - -Wall

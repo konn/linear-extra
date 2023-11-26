@@ -55,7 +55,6 @@ library
     , linear-generics
     , linear-witness
     , primitive
-    , some
     , vector
   default-language: Haskell2010
 
@@ -73,7 +72,6 @@ executable linear-array-extra-exe
     , linear-generics
     , linear-witness
     , primitive
-    , some
     , vector
   default-language: Haskell2010
 
@@ -104,7 +102,6 @@ test-suite linear-array-extra-test
     , linear-witness
     , linear-witness-test-utils
     , primitive
-    , some
     , tasty
     , tasty-hunit
     , vector
