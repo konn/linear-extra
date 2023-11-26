@@ -3293,6 +3293,6 @@ constraints: abstract-deque ==0.3,
              zxcvbn-hs ==0.3.6
 
 allow-newer:
-  falsify:base, falsify:text,
+  falsify:base, falsify:text, falsify:bytestring,
   linear-generics:template-haskell,
   linear-generics:th-abstraction
