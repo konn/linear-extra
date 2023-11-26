@@ -18,7 +18,9 @@ module.exports = async ({ github, context, core, glob, io, require }) => {
     return { path, name, ghc, is_head };
   }
 
-  const plans = files.map(generate_obj) + files_falliable.map(generate_obj);
+  const plans = files
+    .map(generate_obj)
+    .concat(files_falliable.map(generate_obj));
   core.info(`plan: ${JSON.stringify(plans)}`);
   core.setOutput("plan", JSON.stringify(plans));
 };
