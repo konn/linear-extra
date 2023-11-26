@@ -6,7 +6,7 @@ module.exports = async ({ github, context, core, glob, io, require }) => {
   const files_falliable = await globber_falliable.glob();
 
   function generate_obj(fullpath) {
-    const is_head = fullpath.test(/configs\/head/);
+    const is_head = /configs\/head/.test(fullpath);
     const prefix = is_head ? "ci/configs/head/" : "ci/configs/";
     const path = fullpath.replace(/^.+\//, prefix);
     const name = fullpath.replaceAll(/.+\/|\.project$/g, "");
