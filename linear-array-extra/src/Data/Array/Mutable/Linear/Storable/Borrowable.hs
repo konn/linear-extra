@@ -75,7 +75,6 @@ data SuchThat f g s where
   SuchThat :: f s -> g s %1 -> SuchThat f g s
 
 newtype SArray a s = SArray (Raw.SArray a)
-  deriving newtype (Consumable)
 
 type R :: forall {s}. s -> Type
 data R s = R
