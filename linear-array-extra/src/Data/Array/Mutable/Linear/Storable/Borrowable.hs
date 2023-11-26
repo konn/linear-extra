@@ -234,9 +234,8 @@ unsafeSwap :: (SV.Storable a) => RW s %1 -> Int -> Int -> SArray a s -> RW s
 unsafeSwap (RW r w) i j sa =
   unsafeGet r i sa & \(Ur ai, !r) ->
     unsafeGet r j sa & \(Ur aj, !r) ->
-      RW r w & \ !rw ->
-        unsafeSet rw i aj sa & \ !rw ->
-          unsafeSet rw j ai sa
+      unsafeSet (RW r w) i aj sa & \ !rw ->
+        unsafeSet rw j ai sa
 
 swap :: (SV.Storable a, HasCallStack) => RW s %1 -> Int -> Int -> SArray a s -> RW s
 {-# INLINE swap #-}
