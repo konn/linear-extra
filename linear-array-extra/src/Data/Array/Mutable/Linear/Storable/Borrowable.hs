@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -34,6 +35,7 @@ module Data.Array.Mutable.Linear.Storable.Borrowable (
   fromListL,
   fromVectorL,
   freeze,
+  free,
   R,
   W,
   RW (..),
@@ -73,6 +75,7 @@ data SuchThat f g s where
   SuchThat :: f s -> g s %1 -> SuchThat f g s
 
 newtype SArray a s = SArray (Raw.SArray a)
+  deriving newtype (Consumable)
 
 type R :: forall {s}. s -> Type
 data R s = R
@@ -149,6 +152,9 @@ fromVectorL xs l =
 freeze :: forall a s. (SV.Storable a) => RW s %1 -> SArray a s -> Ur (SV.Vector a)
 {-# INLINE freeze #-}
 freeze = (`lseq` coerce (forget $ Raw.freeze @a))
+
+free :: RW s %1 -> SArray a s -> ()
+free (RW R W) (SArray sa) = consume sa
 
 size :: R s %1 -> SArray a s -> (Ur Int, R s)
 {-# INLINE size #-}
