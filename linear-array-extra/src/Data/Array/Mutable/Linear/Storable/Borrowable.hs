@@ -45,6 +45,8 @@ module Data.Array.Mutable.Linear.Storable.Borrowable (
   unsafeGet,
   set,
   unsafeSet,
+  swap,
+  unsafeSwap,
   SlicesTo (),
   Slice (..),
   split,
@@ -64,8 +66,8 @@ import GHC.Stack (HasCallStack)
 import GHC.TypeLits
 import Generics.Linear.TH (deriveGeneric)
 import Linear.Witness.Token
+import Linear.Witness.Token.Unsafe (HasLinearWitness)
 import Prelude.Linear
-import Prelude.Linear.Generically (Generically (..))
 import Prelude.Linear.Unsatisfiable (Unsatisfiable, unsatisfiable)
 import qualified Unsafe.Linear as Unsafe
 
@@ -77,53 +79,38 @@ data SuchThat f g s where
 newtype SArray a s = SArray (Raw.SArray a)
 
 type R :: forall {s}. s -> Type
-data R s = R
-
-deriveGeneric ''R
-
-deriving via Generically (R s) instance Consumable (R s)
+data R s = R deriving anyclass (HasLinearWitness)
 
 instance
-  (Unsatisfiable ('ShowType (R s) ':<>: 'Text " is not Dupable by design")) =>
-  Dupable (R s)
+  (Unsatisfiable ('ShowType (R s) ':<>: 'Text " is not Consumable by design")) =>
+  Consumable (R s)
   where
-  dup2 = unsatisfiable
-  {-# INLINE dup2 #-}
-  dupR = unsatisfiable
-  {-# INLINE dupR #-}
+  consume = unsatisfiable
+  {-# INLINE consume #-}
 
 type W :: forall {s}. s -> Type
-data W s = W
-
-deriveGeneric ''W
-
-deriving via Generically (W s) instance Consumable (W s)
+data W s = W deriving anyclass (HasLinearWitness)
 
 instance
-  (Unsatisfiable ('ShowType (W s) ':<>: 'Text " is not Dupable by design")) =>
-  Dupable (W s)
+  (Unsatisfiable ('ShowType (W s) ':<>: 'Text " is not Consumable by design")) =>
+  Consumable (W s)
   where
-  dup2 = unsatisfiable
-  {-# INLINE dup2 #-}
-  dupR = unsatisfiable
-  {-# INLINE dupR #-}
+  consume = unsatisfiable
+  {-# INLINE consume #-}
 
 type RW :: forall {s}. s -> Type
 data RW s where
   RW :: R s %1 -> W s %1 -> RW s
+  deriving anyclass (HasLinearWitness)
 
 deriveGeneric ''RW
 
-deriving via Generically (RW s) instance Consumable (RW s)
-
 instance
-  (Unsatisfiable ('ShowType (RW s) ':<>: 'Text " is not Dupable by design")) =>
-  Dupable (RW s)
+  (Unsatisfiable ('ShowType (RW s) ':<>: 'Text " is not Consumable by design")) =>
+  Consumable (RW s)
   where
-  dup2 = unsatisfiable
-  {-# INLINE dup2 #-}
-  dupR = unsatisfiable
-  {-# INLINE dupR #-}
+  consume = unsatisfiable
+  {-# INLINE consume #-}
 
 allocL ::
   (HasCallStack, SV.Storable a) =>
@@ -150,7 +137,7 @@ fromVectorL xs l =
 
 freeze :: forall a s. (SV.Storable a) => RW s %1 -> SArray a s -> Ur (SV.Vector a)
 {-# INLINE freeze #-}
-freeze = (`lseq` coerce (forget $ Raw.freeze @a))
+freeze = Unsafe.toLinear \_ -> coerce (forget $ Raw.freeze @a)
 
 free :: RW s %1 -> SArray a s -> ()
 free (RW R W) (SArray sa) = consume sa
@@ -184,16 +171,12 @@ data SlicesTo s l r = SlicesTo
 
 deriveGeneric ''SlicesTo
 
-deriving via Generically (SlicesTo s l r) instance Consumable (SlicesTo s l r)
-
 instance
-  (Unsatisfiable ('ShowType (SlicesTo s) ':<>: 'Text " is not Dupable by design")) =>
-  Dupable (SlicesTo s l r)
+  (Unsatisfiable ('ShowType (SlicesTo s) ':<>: 'Text " is not Consumable by design")) =>
+  Consumable (SlicesTo s l r)
   where
-  dup2 = unsatisfiable
-  {-# INLINE dup2 #-}
-  dupR = unsatisfiable
-  {-# INLINE dupR #-}
+  consume = unsatisfiable
+  {-# INLINE consume #-}
 
 data Slice a s where
   MkSlice ::
@@ -221,7 +204,7 @@ split (RW r w) l arr =
   size r arr & \(Ur n, r) ->
     if 0 <= l && l < n
       then unsafeSplit (RW r w) l arr
-      else r `lseq` w `lseq` error ("split: Index out of bounds: " <> show (l, n))
+      else error ("split: Index out of bounds: " <> show (l, n)) r w
 
 combine ::
   SlicesTo s l r %1 ->
@@ -244,3 +227,18 @@ halve :: (SV.Storable a) => RW s %1 -> SArray a s -> Slice a s
 halve (RW r w) arr =
   size r arr & \(Ur ln, r) ->
     unsafeSplit (RW r w) (ln `quot` 2) arr
+
+unsafeSwap :: (SV.Storable a) => RW s %1 -> Int -> Int -> SArray a s -> RW s
+unsafeSwap (RW r w) i j sa =
+  unsafeGet r i sa & \(Ur ai, r) ->
+    unsafeGet r j sa & \(Ur aj, r) ->
+      RW r w & \rw ->
+        unsafeSet rw i aj sa & \rw ->
+          unsafeSet rw j ai sa
+
+swap :: (SV.Storable a, HasCallStack) => RW s %1 -> Int -> Int -> SArray a s -> RW s
+swap (RW r w) i j sa =
+  size r sa & \(Ur len, r) ->
+    if 0 <= i && i < len && 0 <= j && j < len
+      then unsafeSwap (RW r w) i j sa
+      else error ("swap: out of bounds: " <> show (len, (i, j))) r w
