@@ -3292,4 +3292,5 @@ constraints: abstract-deque ==0.3,
              zxcvbn-hs ==0.3.6
 
 allow-newer:
-  linear-generics:template-haskell
+  linear-generics:template-haskell,
+  linear-generics:th-abstraction
