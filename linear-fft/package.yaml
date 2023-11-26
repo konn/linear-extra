@@ -22,6 +22,7 @@ description:         Please see the README on GitHub at <https://github.com/konn
 dependencies:
 - base >= 4.7 && < 5
 - vector
+- deepseq
 
 ghc-options:
 - -Wall
@@ -46,8 +47,8 @@ library:
   - linear-generics
 
 executables:
-  linear-fft:
-    main:                Main.hs
+  linear-fft-seq:
+    main:                linear-fft-seq.hs
     source-dirs:         app
     ghc-options:
     - -threaded
@@ -55,6 +56,18 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - linear-fft
+
+  linear-fft-par:
+    main:                linear-fft-par.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - '"-with-rtsopts=-N --nonmoving-gc"'
+    - -rtsopts
+    - -eventlog
+    dependencies:
+    - linear-fft
+    - optparse-applicative
 
 tests:
   linear-fft-test:

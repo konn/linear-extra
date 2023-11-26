@@ -33,6 +33,7 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.7 && <5
+    , deepseq
     , integer-logarithms
     , linear-array-extra
     , linear-base
@@ -43,8 +44,23 @@ library
     , vector
   default-language: Haskell2010
 
-executable linear-fft
-  main-is: Main.hs
+executable linear-fft-par
+  main-is: linear-fft-par.hs
+  other-modules:
+      Paths_linear_fft
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded "-with-rtsopts=-N --nonmoving-gc" -rtsopts -eventlog
+  build-depends:
+      base >=4.7 && <5
+    , deepseq
+    , linear-fft
+    , optparse-applicative
+    , vector
+  default-language: Haskell2010
+
+executable linear-fft-seq
+  main-is: linear-fft-seq.hs
   other-modules:
       Paths_linear_fft
   hs-source-dirs:
@@ -52,6 +68,7 @@ executable linear-fft
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , deepseq
     , linear-fft
     , vector
   default-language: Haskell2010
@@ -66,6 +83,7 @@ test-suite linear-fft-test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , deepseq
     , linear-fft
     , vector
   default-language: Haskell2010
