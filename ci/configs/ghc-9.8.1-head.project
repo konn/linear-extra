@@ -1055,6 +1055,7 @@ constraints: abstract-deque ==0.3,
              extrapolate ==0.4.6,
              fail ==4.9.0.0,
              FailT ==0.1.2.0,
+             falsify ==0.2.0,
              fakedata ==1.0.3,
              fakedata-parser ==0.1.0.0,
              fakedata-quickcheck ==0.2.0,
@@ -3292,5 +3293,6 @@ constraints: abstract-deque ==0.3,
              zxcvbn-hs ==0.3.6
 
 allow-newer:
+  falsify:base, falsify:text,
   linear-generics:template-haskell,
   linear-generics:th-abstraction
