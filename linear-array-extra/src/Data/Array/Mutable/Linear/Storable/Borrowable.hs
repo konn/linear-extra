@@ -213,7 +213,7 @@ split :: (SV.Storable a, HasCallStack) => RW s %1 -> Int -> SArray a s -> Slice 
 {-# INLINE split #-}
 split (RW r w) l arr =
   size r arr & \(Ur n, r) ->
-    if 0 <= n && n < l
+    if 0 <= l && l < n
       then unsafeSplit (RW r w) l arr
       else r `lseq` w `lseq` error ("split: Index out of bounds: " <> show (l, n))
 
