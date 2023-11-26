@@ -31,6 +31,7 @@
 
 module Data.Array.Mutable.Linear.Storable.Borrowable (
   SArray (),
+  Storable,
   allocL,
   fromListL,
   fromVectorL,
