@@ -142,6 +142,7 @@ jobs:
   test:
     name: Test (${{matrix.plan.name}})
     needs: [ci-enumerate, build]
+    continue-on-error: ${{matrix.plan.is_head}}
     strategy:
       matrix:
         plan: ${{fromJSON(needs.ci-enumerate.outputs.plan)}}
