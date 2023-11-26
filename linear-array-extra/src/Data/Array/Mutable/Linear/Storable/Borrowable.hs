@@ -101,7 +101,7 @@ instance
 
 type RW :: forall {s}. s -> Type
 data RW s where
-  RW :: R s %1 -> W s %1 -> RW s
+  RW :: !(R s) %1 -> !(W s) %1 -> RW s
   deriving anyclass (HasLinearWitness)
 
 deriveGeneric ''RW
@@ -138,7 +138,7 @@ fromVectorL xs l =
 
 freeze :: forall a s. (SV.Storable a) => RW s %1 -> SArray a s -> Ur (SV.Vector a)
 {-# INLINE freeze #-}
-freeze = Unsafe.toLinear \_ -> coerce (forget $ Raw.freeze @a)
+freeze (RW R W) = coerce (forget $ Raw.freeze @a)
 
 free :: RW s %1 -> SArray a s -> ()
 free (RW R W) (SArray sa) = consume sa
@@ -148,24 +148,24 @@ size :: R s %1 -> SArray a s -> (Ur Int, R s)
 size r (SArray sa) = Raw.size sa & \(len, _sa) -> (len, r)
 
 get :: (SV.Storable a, HasCallStack) => R s %1 -> Int -> SArray a s -> (Ur a, R s)
-{-# INLINE get #-}
-get r i (SArray sa) =
-  Raw.get i sa & \(a, _) -> (a, r)
+{-# NOINLINE get #-}
+get R i (SArray sa) =
+  Raw.get i sa & \(a, !_) -> (a, R)
 
 unsafeGet :: (SV.Storable a) => R s %1 -> Int -> SArray a s -> (Ur a, R s)
-{-# INLINE unsafeGet #-}
-unsafeGet r i (SArray sa) =
-  Raw.unsafeGet i sa & \(a, _) -> (a, r)
+{-# NOINLINE unsafeGet #-}
+unsafeGet R i (SArray sa) =
+  Raw.unsafeGet i sa & \(a, !_) -> (a, R)
 
 set :: (SV.Storable a, HasCallStack) => RW s %1 -> Int -> a -> SArray a s -> RW s
-{-# INLINE set #-}
-set rw i a (SArray sa) =
-  Raw.set i a sa & \_ -> rw
+{-# NOINLINE set #-}
+set (RW R W) i a (SArray sa) =
+  Raw.set i a sa & \ !_ -> RW R W
 
 unsafeSet :: (SV.Storable a) => RW s %1 -> Int -> a -> SArray a s -> RW s
-{-# INLINE unsafeSet #-}
-unsafeSet rw i a (SArray sa) =
-  Raw.unsafeSet i a sa & \_ -> rw
+{-# NOINLINE unsafeSet #-}
+unsafeSet (RW R W) i a (SArray sa) =
+  Raw.unsafeSet i a sa & \ !_ -> RW R W
 
 type SlicesTo :: forall {s}. s -> s -> s -> Type
 data SlicesTo s l r = SlicesTo
@@ -230,16 +230,18 @@ halve (RW r w) arr =
     unsafeSplit (RW r w) (ln `quot` 2) arr
 
 unsafeSwap :: (SV.Storable a) => RW s %1 -> Int -> Int -> SArray a s -> RW s
+{-# INLINE unsafeSwap #-}
 unsafeSwap (RW r w) i j sa =
-  unsafeGet r i sa & \(Ur ai, r) ->
-    unsafeGet r j sa & \(Ur aj, r) ->
-      RW r w & \rw ->
-        unsafeSet rw i aj sa & \rw ->
+  unsafeGet r i sa & \(Ur ai, !r) ->
+    unsafeGet r j sa & \(Ur aj, !r) ->
+      RW r w & \ !rw ->
+        unsafeSet rw i aj sa & \ !rw ->
           unsafeSet rw j ai sa
 
 swap :: (SV.Storable a, HasCallStack) => RW s %1 -> Int -> Int -> SArray a s -> RW s
+{-# INLINE swap #-}
 swap (RW r w) i j sa =
-  size r sa & \(Ur len, r) ->
+  size r sa & \(Ur len, !r) ->
     if 0 <= i && i < len && 0 <= j && j < len
       then unsafeSwap (RW r w) i j sa
       else error ("swap: out of bounds: " <> show (len, (i, j))) r w

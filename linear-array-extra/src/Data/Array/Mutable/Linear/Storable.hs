@@ -36,6 +36,7 @@ module Data.Array.Mutable.Linear.Storable (
   unsafeSlice,
   unsafeModify,
   unsafeModify_,
+  unsafeSwap,
 ) where
 
 import Data.Array.Mutable.Linear.Storable.Internal
@@ -113,3 +114,10 @@ slice off sz (SArray size sa)
   | otherwise = SArray size sa `lseq` error ("slice: index out of bounds: (size, offset, end) = " <> show (size, off, n))
   where
     !n = off + sz
+
+unsafeSwap :: (SV.Storable a) => Int -> Int -> SArray a %1 -> SArray a
+{-# INLINE unsafeSwap #-}
+unsafeSwap i j sa =
+  unsafeGet i sa & \(Ur ai, sa) ->
+    unsafeGet j sa & \(Ur aj, sa) ->
+      unsafeSet j ai (unsafeSet i aj sa)

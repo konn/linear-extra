@@ -70,6 +70,11 @@ unsafeStrictPerformIO :: IO a %1 -> a
 unsafeStrictPerformIO = Unsafe.toLinear \act -> case runRW# (unIO act) of
   (# !_, !a #) -> a
 
+withUnsafeStrictPerformIO :: IO a %1 -> (a -> b) %1 -> b
+{-# INLINE withUnsafeStrictPerformIO #-}
+withUnsafeStrictPerformIO = Unsafe.toLinear \act -> case runRW# (unIO act) of
+  (# !_, !a #) -> ($ a)
+
 instance (Storable a) => Dupable (SArray a) where
   dup2 = Unsafe.toLinear \(SArray i mu) ->
     unsafeStrictPerformIO do
@@ -120,14 +125,12 @@ fromList xs f = linearly $ f . fromListL xs
 unsafeSet :: (Storable a) => Int -> a -> SArray a %1 -> SArray a
 {-# NOINLINE unsafeSet #-}
 unsafeSet i a = Unsafe.toLinear \arr0@(SArray _ ptr) ->
-  case unsafeStrictPerformIO (pokeElemOff ptr i a) of
-    () -> arr0
+  pokeElemOff ptr i a `withUnsafeStrictPerformIO` const arr0
 
 unsafeGet :: (Storable a) => Int -> SArray a %1 -> (Ur a, SArray a)
 {-# NOINLINE unsafeGet #-}
 unsafeGet i = Unsafe.toLinear \arr0@(SArray _ ptr) ->
-  case unsafeStrictPerformIO (peekElemOff ptr i) of
-    a -> (Ur a, arr0)
+  peekElemOff ptr i `withUnsafeStrictPerformIO` \a -> (Ur a, arr0)
 
 unsafeResize :: (Storable a) => Int -> SArray a %1 -> SArray a
 {-# NOINLINE unsafeResize #-}
