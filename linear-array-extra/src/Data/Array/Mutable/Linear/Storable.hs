@@ -32,6 +32,7 @@ module Data.Array.Mutable.Linear.Storable (
   get,
   unsafeGet,
   unsafeResize,
+  slice,
   unsafeSlice,
   unsafeModify,
   unsafeModify_,
@@ -105,3 +106,10 @@ unsafeModify_ :: (Storable a) => (a -> a) -> Int -> SArray a %1 -> SArray a
 unsafeModify_ f i v =
   unsafeGet i v & \(Ur a, v) ->
     unsafeSet i (f a) v
+
+slice :: (Storable a, HasCallStack) => Int -> Int -> SArray a %1 -> (SArray a, SArray a)
+slice off sz (SArray size sa)
+  | 0 <= off && n < size = unsafeSlice off sz (SArray size sa)
+  | otherwise = SArray size sa `lseq` error ("slice: index out of bounds: (size, offset, end) = " <> show (size, off, n))
+  where
+    !n = off + sz
