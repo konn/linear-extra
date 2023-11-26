@@ -5,8 +5,7 @@ module.exports = async ({ github, context, core, glob, io, require }) => {
 
   function generate_obj(fullpath) {
     const is_head = /-head\.project$/.test(fullpath);
-    const prefix = is_head ? "ci/configs/head/" : "ci/configs/";
-    const path = fullpath.replace(/^.+\//, prefix);
+    const path = fullpath.replace(/^.+\//, "ci/configs/");
     const name = fullpath.replaceAll(/.+\/|\.project$/g, "");
     const match = fs
       .readFileSync(fullpath, "utf-8")
