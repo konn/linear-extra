@@ -1,12 +1,10 @@
 module.exports = async ({ github, context, core, glob, io, require }) => {
   const fs = require("fs");
   const globber = await glob.create("ci/configs/*.project");
-  const globber_falliable = await glob.create("ci/configs/head/*.project");
   const files = await globber.glob();
-  const files_falliable = await globber_falliable.glob();
 
   function generate_obj(fullpath) {
-    const is_head = /configs\/head/.test(fullpath);
+    const is_head = /-head\.project$/.test(fullpath);
     const prefix = is_head ? "ci/configs/head/" : "ci/configs/";
     const path = fullpath.replace(/^.+\//, prefix);
     const name = fullpath.replaceAll(/.+\/|\.project$/g, "");
@@ -18,9 +16,7 @@ module.exports = async ({ github, context, core, glob, io, require }) => {
     return { path, name, ghc, is_head };
   }
 
-  const plans = files
-    .map(generate_obj)
-    .concat(files_falliable.map(generate_obj));
+  const plans = files.map(generate_obj);
   core.info(`plan: ${JSON.stringify(plans)}`);
   core.setOutput("plan", JSON.stringify(plans));
 };
