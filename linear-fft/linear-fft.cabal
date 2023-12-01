@@ -54,6 +54,9 @@ executable linear-fft-par
   build-depends:
       base >=4.7 && <5
     , deepseq
+    , directory
+    , filepath
+    , fmlist
     , linear-fft
     , optparse-applicative
     , vector
@@ -69,7 +72,11 @@ executable linear-fft-seq
   build-depends:
       base >=4.7 && <5
     , deepseq
+    , directory
+    , filepath
+    , fmlist
     , linear-fft
+    , optparse-applicative
     , vector
   default-language: Haskell2010
 

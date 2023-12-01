@@ -56,6 +56,10 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - linear-fft
+    - fmlist
+    - optparse-applicative
+    - directory
+    - filepath
 
   linear-fft-par:
     main:                linear-fft-par.hs
@@ -67,7 +71,10 @@ executables:
     - -eventlog
     dependencies:
     - linear-fft
+    - fmlist
     - optparse-applicative
+    - directory
+    - filepath
 
 tests:
   linear-fft-test:
