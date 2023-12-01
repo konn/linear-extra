@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Numeric.FFT.App
       Numeric.FFT.CooleyTukey.Linear
   other-modules:
       Paths_linear_fft
@@ -34,6 +35,9 @@ library
   build-depends:
       base >=4.7 && <5
     , deepseq
+    , directory
+    , filepath
+    , fmlist
     , integer-logarithms
     , linear-array-extra
     , linear-base
@@ -41,42 +45,21 @@ library
     , linear-memory
     , linear-parallel
     , linear-witness
-    , vector
-  default-language: Haskell2010
-
-executable linear-fft-par
-  main-is: linear-fft-par.hs
-  other-modules:
-      Paths_linear_fft
-  hs-source-dirs:
-      app
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded "-with-rtsopts=-N --nonmoving-gc" -rtsopts -eventlog
-  build-depends:
-      base >=4.7 && <5
-    , deepseq
-    , directory
-    , filepath
-    , fmlist
-    , linear-fft
     , optparse-applicative
     , vector
   default-language: Haskell2010
 
-executable linear-fft-seq
-  main-is: linear-fft-seq.hs
+executable linear-fft
+  main-is: linear-fft.hs
   other-modules:
       Paths_linear_fft
   hs-source-dirs:
       app
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts "-with-rtsopts=-N --nonmoving-gc" -eventlog
   build-depends:
       base >=4.7 && <5
     , deepseq
-    , directory
-    , filepath
-    , fmlist
     , linear-fft
-    , optparse-applicative
     , vector
   default-language: Haskell2010
 

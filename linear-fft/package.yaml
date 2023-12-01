@@ -45,36 +45,22 @@ library:
   - linear-witness
   - linear-base
   - linear-generics
+  - fmlist
+  - optparse-applicative
+  - directory
+  - filepath
 
 executables:
-  linear-fft-seq:
-    main:                linear-fft-seq.hs
+  linear-fft:
+    main:                linear-fft.hs
     source-dirs:         app
     ghc-options:
     - -threaded
     - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - linear-fft
-    - fmlist
-    - optparse-applicative
-    - directory
-    - filepath
-
-  linear-fft-par:
-    main:                linear-fft-par.hs
-    source-dirs:         app
-    ghc-options:
-    - -threaded
     - '"-with-rtsopts=-N --nonmoving-gc"'
-    - -rtsopts
     - -eventlog
     dependencies:
     - linear-fft
-    - fmlist
-    - optparse-applicative
-    - directory
-    - filepath
 
 tests:
   linear-fft-test:
