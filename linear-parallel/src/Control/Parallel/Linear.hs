@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -funbox-strict-fields #-}
@@ -42,11 +43,13 @@ lpseq = Unsafe.toLinear2 \x y -> x `lseq` lazy y
 A linear variant of 'GHC.Conc.par', but returns both arguments to avoid consuming the first.
 -}
 par :: a %1 -> b %1 -> (a, b)
-{-# INLINE par #-}
+{-# NOINLINE par #-}
 {- HLint ignore par -}
-par = Unsafe.toLinear2 \x y ->
-  case GHC.par# x of
-    _ -> (x, lazy y)
+par = Unsafe.toLinear2 \x y -> GHC.runRW# \s ->
+  case GHC.spark# x s of
+    (# s, x #) -> case GHC.spark# y s of
+      (# s, y #) -> case GHC.seq# (x, y) s of
+        (# _s, xy #) -> xy
 
 {- |
 A linear variant of 'GHC.Conc.par' which consumes the first argument parallely.
