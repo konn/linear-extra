@@ -51,20 +51,20 @@ optionsP = Opts.info (p <**> Opts.helper) $ Opts.progDesc "Parallel FFT"
       sequential <- Opts.switch $ Opts.short 's' <> Opts.long "seq" <> Opts.help "Sequential FFT"
       pure Opts {..}
 
-sample :: Double -> Int -> (Double -> Double) -> S.Vector (Complex Double)
-sample eps n f =
-  S.generate n (\i -> f (eps * fromIntegral i / fromIntegral n) :+ 0.0)
+sample :: Int -> (Double -> Double) -> S.Vector (Complex Double)
+sample n f =
+  S.generate n (\i -> f (-4 + 8 * fromIntegral i / fromIntegral n) :+ 0.0)
 
 kN :: Int
 kN = 2 ^ (20 :: Int)
 
 fun :: Double -> Double
-fun x = sin (2 * pi * x) + 2 * sin (pi * 0.25 * x) + 4 * sin (0.5 * pi)
+fun x = sin (2 * pi * x) + 2 * sin (pi * x) + 3 * sin (0.5 * pi * x)
 
 defaultMain :: IO ()
 defaultMain = do
   Opts {..} <- Opts.execParser optionsP
-  !v <- evaluate $ force $ sample 0.125 size fun
+  !v <- evaluate $ force $ sample size fun
   let fft
         | sequential = FFT.fft
         | otherwise = FFT.fftPar threshold
