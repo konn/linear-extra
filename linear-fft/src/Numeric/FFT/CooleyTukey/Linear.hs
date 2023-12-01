@@ -123,7 +123,7 @@ fftRawPar (RW r w) (max 0 -> thresh) array =
                       (loop rwL l half dblCs dblSn, loop rwR r half dblCs dblSn)
                   | otherwise =
                       loop rwL l half dblCs dblSn `par` loop rwR r half dblCs dblSn
-             in recur rwL rwR & \(!rwL, !rwR) ->
+             in recur rwL rwR & \(rwL, rwR) ->
                   SA.combine sliced rwL rwR l r & \(Ur _, rw) ->
                     forN
                       half

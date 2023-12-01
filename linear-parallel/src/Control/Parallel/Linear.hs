@@ -41,6 +41,8 @@ lpseq = Unsafe.toLinear2 \x y -> x `lseq` lazy y
 
 {- |
 A linear variant of 'GHC.Conc.par', but returns both arguments to avoid consuming the first.
+
+N.B.: We need to seq both arguments to ensure the both computation finishes when @par@ returned.
 -}
 par :: a %1 -> b %1 -> (a, b)
 {-# NOINLINE par #-}
@@ -48,8 +50,9 @@ par :: a %1 -> b %1 -> (a, b)
 par = Unsafe.toLinear2 \x y -> GHC.runRW# \s ->
   case GHC.spark# x s of
     (# s, x #) -> case GHC.spark# y s of
-      (# s, y #) -> case GHC.seq# (x, y) s of
-        (# _s, xy #) -> xy
+      (# s, y #) -> case GHC.seq# x s of
+        (# s, x #) -> case GHC.seq# y s of
+          (# _s, y #) -> (x, y)
 
 {- |
 A linear variant of 'GHC.Conc.par' which consumes the first argument parallely.
