@@ -219,11 +219,14 @@ in parallel with the application of the first function.
 newtype Eval a = Eval {_unEval :: LIO.IO a}
   deriving newtype (D.Functor, C.Functor, D.Applicative, C.Applicative, C.Monad)
 
+-- NOTE: We need noDuplicate# here, otherwise
+-- pure but destructive operations got duplicated
+-- and disaster comes out.
 runEval :: Eval a %1 -> a
 {-# ANN runEval "HLint: ignore Avoid lambda" #-}
 runEval = Unsafe.toLinear \(Eval (LIO.IO k)) ->
-  case runRW# (\s -> k s) of
-    (# _, a #) -> a
+  case runRW# (\s -> k (GHC.noDuplicate# s)) of
+    (# _, a #) -> lazy a
 
 runEvalIO :: Eval a %1 -> LIO.IO a
 {-# ANN runEvalIO "HLint: ignore" #-}

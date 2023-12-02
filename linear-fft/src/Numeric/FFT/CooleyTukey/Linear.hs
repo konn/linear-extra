@@ -13,6 +13,7 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE QualifiedDo #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
@@ -31,7 +32,9 @@ module Numeric.FFT.CooleyTukey.Linear (
   reverseBit,
 ) where
 
+import qualified Control.Functor.Linear as C
 import Control.Parallel.Linear (par)
+import Control.Parallel.Strategy.Linear (rseq, runEval)
 import Data.Array.Mutable.Linear.Storable.Borrowable (RW (..), SArray, SuchThat (..))
 import qualified Data.Array.Mutable.Linear.Storable.Borrowable as SA
 import Data.Bits (bit, popCount, shiftR)
@@ -90,6 +93,14 @@ fftRaw (RW r w) array =
                         )
                         rw
 
+parIf :: Bool -> a %1 -> b %1 -> (a, b)
+{-# INLINE parIf #-}
+parIf True a b = par a b
+parIf False a b = runEval C.do
+  a <- rseq a
+  b <- rseq b
+  C.pure (a, b)
+
 fftRawPar ::
   forall s.
   (HasCallStack) =>
@@ -118,20 +129,15 @@ fftRawPar (RW r w) (max 0 -> thresh) array =
                 !dblCs = 2 * c * c - 1
                 !dblSn = 2 * s * c
                 !kW = c :+ s
-                recur rwL rwR
-                  | n <= thresh =
-                      (loop rwL l half dblCs dblSn, loop rwR r half dblCs dblSn)
-                  | otherwise =
-                      loop rwL l half dblCs dblSn `par` loop rwR r half dblCs dblSn
-             in recur rwL rwR & \(!rwL, !rwR) ->
-                  SA.combine sliced rwL rwR l r & \(Ur _, rw) ->
+             in parIf (n > thresh) (loop rwL l half dblCs dblSn) (loop rwR r half dblCs dblSn) & \(!rwL, !rwR) ->
+                  SA.combine sliced rwL rwR l r & \(Ur arr, !rw) ->
                     forN
                       half
-                      ( \k (RW r w) ->
-                          SA.unsafeGet r k arr & \(Ur ek, r) ->
-                            SA.unsafeGet r (half + k) arr & \(Ur ok, r) ->
-                              RW r w & \rw ->
-                                SA.unsafeSet rw k (ek + kW ^ k * ok) arr & \rw ->
+                      ( \ !k (RW r w) ->
+                          SA.unsafeGet r k arr & \(Ur ek, !r) ->
+                            SA.unsafeGet r (half + k) arr & \(Ur ok, !r) ->
+                              RW r w & \ !rw ->
+                                SA.unsafeSet rw k (ek + kW ^ k * ok) arr & \ !rw ->
                                   SA.unsafeSet rw (half + k) (ek + kW ^ (half + k) * ok) arr
                       )
                       rw

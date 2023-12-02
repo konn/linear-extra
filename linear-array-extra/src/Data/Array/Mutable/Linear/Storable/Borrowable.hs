@@ -7,24 +7,22 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE StrictData #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# HLINT ignore "Use const" #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UnliftedNewtypes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -funbox-strict-fields #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
@@ -69,9 +67,9 @@ import Foreign.Ptr (Ptr)
 import Foreign.Storable (Storable, peekElemOff, pokeElemOff)
 import qualified GHC.Exts as GHC
 import qualified GHC.IO as GHC
+import qualified GHC.IO as IO
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits
-import Generics.Linear.TH (deriveGeneric)
 import Linear.Witness.Token
 import Linear.Witness.Token.Unsafe (HasLinearWitness)
 import Prelude.Linear
@@ -85,7 +83,9 @@ data SuchThat f g s where
   SuchThat :: f s -> g s %1 -> SuchThat f g s
 
 data SArray a s where
-  SArray :: {-# UNPACK #-} !Int -> {-# UNPACK #-} !(Ptr a) %1 -> SArray a s
+  SArray :: {-# UNPACK #-} !Int -> {-# UNPACK #-} !(Ptr a) -> SArray a s
+
+type ZeroBitType = GHC.TYPE ('GHC.TupleRep '[])
 
 type R :: forall {s}. s -> Type
 data R s = R deriving anyclass (HasLinearWitness)
@@ -112,29 +112,12 @@ data RW s where
   RW :: !(R s) %1 -> !(W s) %1 -> RW s
   deriving anyclass (HasLinearWitness)
 
-deriveGeneric ''RW
-
 instance
   (Unsatisfiable ('ShowType (RW s) ':<>: 'Text " is not Consumable by design")) =>
   Consumable (RW s)
   where
   consume = unsatisfiable
   {-# INLINE consume #-}
-
-{-
--- FIXME: more efficient implementation?
-fill :: (Storable a) => a -> SArray a s %1 -> SArray a
-{-# NOINLINE fill #-}
-fill a = Unsafe.toLinear \arr@(SArray n ptr) ->
-  let go =
-        fix
-          ( \self !i ->
-              if i == n
-                then P.pure arr
-                else pokeElemOff ptr i a P.>> self (i + 1)
-          )
-          0
-   in unsafeStrictPerformIO go -}
 
 unsafeAllocL ::
   (SV.Storable a) =>
@@ -157,15 +140,13 @@ allocL n a l
   | n < 0 = l `lseq` error ("allocL: negative length: " <> show n)
   | otherwise =
       l `lseq` withUnsafeStrictPerformIO (mallocArray n) \ptr ->
-        withUnsafeStrictPerformIO
-          ( fix
-              ( \self !i ->
-                  unless (i == n) $
-                    pokeElemOff ptr i a P.>> self (i + 1)
-              )
-              0
+        fix
+          ( \self !i ->
+              unless (i == n) $
+                pokeElemOff ptr i a P.>> self (i + 1)
           )
-          \() -> SArray n ptr `SuchThat` RW R W
+          0
+          `withUnsafeStrictPerformIO_` (SArray n ptr `SuchThat` RW R W)
 
 fromListL :: (Storable a) => [a] -> Linearly %1 -> SuchThat (SArray a) RW s
 {-# NOINLINE fromListL #-}
@@ -179,32 +160,32 @@ fromVectorL :: (Storable a) => SV.Vector a -> Linearly %1 -> SuchThat (SArray a)
 {-# NOINLINE fromVectorL #-}
 fromVectorL xs l =
   unsafeAllocL (SV.length xs) l & \(SArray sz ptr `SuchThat` RW R W) ->
-    withUnsafeStrictPerformIO
-      (SV.unsafeWith xs $ \src -> copyArray ptr src sz)
-      \() -> SArray sz ptr `SuchThat` RW R W
+    SV.unsafeWith xs (\src -> copyArray ptr src sz)
+      `withUnsafeStrictPerformIO_` (SArray sz ptr `SuchThat` RW R W)
+
+withUnsafeStrictPerformIO_ :: IO () -> a %1 -> a
+{-# INLINE withUnsafeStrictPerformIO_ #-}
+withUnsafeStrictPerformIO_ act = Unsafe.toLinear \x ->
+  case GHC.runRW# $ GHC.unIO (do IO.noDuplicate; do { () <- act; P.pure x }) of
+    (# _, !a #) -> GHC.lazy a
 
 unsafeStrictPerformIO :: IO a %1 -> a
-{-# NOINLINE unsafeStrictPerformIO #-}
-unsafeStrictPerformIO =
-  GHC.noinline
-    ( Unsafe.toLinear \act -> case GHC.runRW# (GHC.unIO act) of
-        (# !_, !a #) -> a
-    )
+{-# INLINE unsafeStrictPerformIO #-}
+unsafeStrictPerformIO = Unsafe.toLinear \act ->
+  case GHC.runRW# $ GHC.unIO do IO.noDuplicate; IO.evaluate P.=<< act of
+    (# _, !a #) -> GHC.lazy a
 
 withUnsafeStrictPerformIO :: IO a %1 -> (a -> b) %1 -> b
-{-# NOINLINE withUnsafeStrictPerformIO #-}
-withUnsafeStrictPerformIO =
-  GHC.noinline
-    ( Unsafe.toLinear2 \act f -> case GHC.runRW# (GHC.unIO act) of
-        (# !_, !a #) ->
-          let !b = f a
-           in b
-    )
+{-# INLINE withUnsafeStrictPerformIO #-}
+withUnsafeStrictPerformIO = Unsafe.toLinear2 \act f ->
+  case GHC.runRW# $ GHC.unIO do IO.noDuplicate; do { !a <- act; IO.evaluate (f a) } of
+    (# _, b #) -> GHC.lazy b
 
 freeze :: forall a s. (SV.Storable a) => RW s %1 -> SArray a s -> Ur (SV.Vector a)
 {-# NOINLINE freeze #-}
-freeze (RW R W) = GHC.noinline $ \(SArray l ptr) ->
-  withUnsafeStrictPerformIO (newForeignPtr finalizerFree ptr) \fptr -> Ur (SV.unsafeFromForeignPtr0 fptr l)
+freeze = GHC.noinline $ \(RW R W) (SArray l ptr) ->
+  newForeignPtr finalizerFree ptr
+    `withUnsafeStrictPerformIO` \fptr -> Ur (SV.unsafeFromForeignPtr0 fptr l)
 
 free :: RW s %1 -> SArray a s -> ()
 {-# NOINLINE free #-}
@@ -223,33 +204,26 @@ get r i arr@(SArray sz _) =
 
 unsafeGet :: (SV.Storable a) => R s %1 -> Int -> SArray a s -> (Ur a, R s)
 {-# NOINLINE unsafeGet #-}
-unsafeGet !r i (SArray _ ptr) =
+unsafeGet = GHC.noinline \ !r i (SArray _ ptr) ->
   (Ur P.<$> peekElemOff ptr i) `withUnsafeStrictPerformIO` (,r)
 
 set :: (SV.Storable a, HasCallStack) => RW s %1 -> Int -> a -> SArray a s -> RW s
-{-#OINLINE set #-}
+{-# INLINE set #-}
 set !rw i a arr@(SArray sz _) =
   if 0 <= i && i < sz
     then unsafeSet rw i a arr
-    else error ("get: out of bounds: " <> show (i, sz)) rw
+    else error ("set: out of bounds: " <> show (i, sz)) rw
 
 unsafeSet :: (SV.Storable a) => RW s %1 -> Int -> a -> SArray a s -> RW s
 {-# NOINLINE unsafeSet #-}
-unsafeSet (RW R W) i a (SArray _ ptr) =
-  pokeElemOff ptr i a `withUnsafeStrictPerformIO` \() ->
-    RW R W
+unsafeSet (RW r w) !i !a (SArray _ !ptr) =
+  pokeElemOff ptr i a `withUnsafeStrictPerformIO_` RW r w
 
-type SlicesTo :: forall {s}. s -> s -> s -> Type
-data SlicesTo s l r = SlicesTo
+type SlicesTo :: forall {s}. s -> s -> s -> ZeroBitType
+newtype SlicesTo s l r = SlicesTo_ GHC.Void#
 
-deriveGeneric ''SlicesTo
-
-instance
-  (Unsatisfiable ('ShowType (SlicesTo s) ':<>: 'Text " is not Consumable by design")) =>
-  Consumable (SlicesTo s l r)
-  where
-  consume = unsatisfiable
-  {-# INLINE consume #-}
+pattern SlicesTo :: SlicesTo s l r
+pattern SlicesTo <- SlicesTo_ _ where SlicesTo = SlicesTo_ GHC.void#
 
 data Slice a s where
   MkSlice ::
@@ -262,7 +236,7 @@ data Slice a s where
 
 unsafeSplit :: (SV.Storable a) => RW s %1 -> Int -> SArray a s -> Slice a s
 {-# NOINLINE unsafeSplit #-}
-unsafeSplit (RW R W) lenL (SArray len v) =
+unsafeSplit = GHC.noinline \(RW R W) lenL (SArray len v) ->
   let !lenR = len - lenL
    in MkSlice
         SlicesTo
@@ -287,12 +261,12 @@ combine ::
   (Ur (SArray a s), RW s)
 {-# NOINLINE combine #-}
 combine
-  SlicesTo
-  (RW R W)
+  SlicesTo_ {}
+  !rw
   (RW R W)
   (SArray lenL v)
   (SArray lenR _) =
-    (Ur (SArray (lenL + lenR) v), RW R W)
+    (Ur (SArray (lenL + lenR) v), Unsafe.coerce rw)
 
 halve :: (SV.Storable a) => RW s %1 -> SArray a s -> Slice a s
 {-# INLINE halve #-}
