@@ -110,10 +110,9 @@ fftRawPar (RW r w) (max 0 -> thresh) array =
               loop rw array len (cos theta) (sin theta)
   where
     loop :: RW n %1 -> SArray (Complex Double) n -> Int -> Double -> Double -> RW n
-    loop rw arr !n !c !s =
-      if n <= 1
-        then rw
-        else
+    loop rw arr !n !c !s
+      | n <= 1 = rw
+      | otherwise =
           SA.halve rw arr & \(SA.MkSlice sliced rwL rwR l r) ->
             let !half = n `quot` 2
                 !dblCs = 2 * c * c - 1
@@ -132,9 +131,8 @@ fftRawPar (RW r w) (max 0 -> thresh) array =
                         ( \ !k (RW r w) ->
                             SA.unsafeGet r k arr & \(Ur ek, r) ->
                               SA.unsafeGet r (half + k) arr & \(Ur ok, r) ->
-                                RW r w & \rw ->
-                                  SA.unsafeSet rw k (ek + kW ^ k * ok) arr & \rw ->
-                                    SA.unsafeSet rw (half + k) (ek + kW ^ (half + k) * ok) arr
+                                SA.unsafeSet (RW r w) k (ek + kW ^ k * ok) arr & \rw ->
+                                  SA.unsafeSet rw (half + k) (ek + kW ^ (half + k) * ok) arr
                         )
                         rw
 
