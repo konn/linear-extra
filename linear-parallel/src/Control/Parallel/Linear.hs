@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -5,6 +6,7 @@
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE QualifiedDo #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
@@ -21,9 +23,10 @@ module Control.Parallel.Linear (
   lpar,
 ) where
 
+import qualified Control.Functor.Linear as C
+import Control.Parallel.Strategy.Linear
 import qualified GHC.Conc as GHC
 import GHC.Exts
-import qualified GHC.Exts as GHC
 import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
 
@@ -46,13 +49,12 @@ N.B.: We need to seq both arguments to ensure the both computation finishes when
 -}
 par :: a %1 -> b %1 -> (a, b)
 {-# NOINLINE par #-}
-{- HLint ignore par -}
-par = Unsafe.toLinear2 \x y -> GHC.runRW# \s ->
-  case GHC.spark# x s of
-    (# s, x #) -> case GHC.spark# y s of
-      (# s, y #) -> case GHC.seq# x s of
-        (# s, x #) -> case GHC.seq# y s of
-          (# _s, y #) -> (x, y)
+par a b = runEval C.do
+  a <- rpar a
+  b <- rpar b
+  a <- rseq a
+  b <- rseq b
+  C.pure (a, b)
 
 {- |
 A linear variant of 'GHC.Conc.par' which consumes the first argument parallely.
