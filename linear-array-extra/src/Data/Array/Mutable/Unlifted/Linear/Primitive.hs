@@ -38,6 +38,7 @@ import Data.Primitive (MutableByteArray#, PrimArray (..))
 import Data.Primitive.Types
 import GHC.Exts (Proxy#, (*#))
 import qualified GHC.Exts as GHC
+import GHC.IO (noDuplicate)
 import Linear.Witness.Token
 import Prelude.Linear hiding (dup2, lseq, map)
 import qualified Unsafe.Linear as Unsafe
@@ -98,9 +99,10 @@ unsafeAllocL = GHC.noinline \(GHC.I# n#) l ->
 {-# NOINLINE unsafeAllocL #-} -- prevents runRW# from floating outwards
 
 fill :: (Prim a) => a -> PrimArray# a %1 -> PrimArray# a
+{- HLINT ignore fill -}
 fill (a :: a) = Unsafe.toLinear \(PrimArray# arr :: PrimArray# a) ->
   let !(GHC.I# i) = sizeOfPrimArray# (GHC.proxy# @a) arr
-   in case GHC.runRW# (setByteArray# arr 0# i a) of
+   in case GHC.runRW# (\s -> setByteArray# arr 0# i a (GHC.noDuplicate# s)) of
         !_ -> PrimArray# arr
 {-# NOINLINE fill #-}
 
@@ -144,11 +146,12 @@ get (GHC.I# i) = Unsafe.toLinear go
 {-# NOINLINE get #-} -- prevents the runRW# effect from being reordered
 
 set :: forall a. (Prim a) => Int -> a -> PrimArray# a %1 -> PrimArray# a
+{- HLINT ignore set -}
 set (GHC.I# i) (a :: a) = Unsafe.toLinear go
   where
     go :: PrimArray# a -> PrimArray# a
     go (PrimArray# arr) =
-      case GHC.runRW# (writeByteArray# arr i a) of
+      case GHC.runRW# (\s -> writeByteArray# arr i a (GHC.noDuplicate# s)) of
         !_ -> PrimArray# arr
 {-# NOINLINE set #-} -- prevents the runRW# effect from being reordered
 
@@ -170,6 +173,7 @@ copyInto ::
   PrimArray# a %1 ->
   PrimArray# a %1 ->
   (# PrimArray# a, PrimArray# a #)
+{- HLINT ignore copyInto -}
 copyInto start@(GHC.I# start#) = Unsafe.toLinear2 go
   where
     go :: PrimArray# a -> PrimArray# a -> (# PrimArray# a, PrimArray# a #)
@@ -179,7 +183,7 @@ copyInto start@(GHC.I# start#) = Unsafe.toLinear2 go
               (sizeOfPrimArray# (GHC.proxy# @a) src P.- start)
               (sizeOfPrimArray# (GHC.proxy# @a) dst)
           !sz# = sizeOf# (undefined :: a)
-       in case GHC.runRW# (GHC.copyMutableByteArray# src (start# *# sz#) dst 0# (len# *# sz#)) of
+       in case GHC.runRW# (\s -> GHC.copyMutableByteArray# src (start# *# sz#) dst 0# (len# *# sz#) (GHC.noDuplicate# s)) of
             !_ -> (# PrimArray# src, PrimArray# dst #)
 {-# NOINLINE copyInto #-} -- prevents the runRW# effect from being reordered
 
@@ -190,7 +194,7 @@ map (f :: a -> b) =
         let len :: GHC.Int#
             !(GHC.I# len) = sizeOfPrimArray# (GHC.proxy# @a) as
          in GHC.runRW# \s ->
-              case GHC.newByteArray# (len GHC.*# sizeOf# (undefined :: b)) s of
+              case GHC.newByteArray# (len GHC.*# sizeOf# (undefined :: b)) (GHC.noDuplicate# s) of
                 (# s, bs #) ->
                   let
                     -- For each index ([0..len - 1]), we read the element on 'as', pass
@@ -236,7 +240,7 @@ dup2 = Unsafe.toLinear go
     go :: PrimArray# a -> (# PrimArray# a, PrimArray# a #)
     go (PrimArray# arr) = GHC.runRW# \s ->
       let len# = GHC.sizeofMutableByteArray# arr
-       in case GHC.newByteArray# len# s of
+       in case GHC.newByteArray# len# (GHC.noDuplicate# s) of
             (# s, new #) ->
               case GHC.copyMutableByteArray# arr 0# new 0# len# s of
                 !_ -> (# PrimArray# arr, PrimArray# new #)
