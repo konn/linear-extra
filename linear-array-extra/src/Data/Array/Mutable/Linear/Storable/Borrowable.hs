@@ -166,19 +166,19 @@ fromVectorL xs l =
 withUnsafeStrictPerformIO_ :: IO () -> a %1 -> a
 {-# INLINE withUnsafeStrictPerformIO_ #-}
 withUnsafeStrictPerformIO_ act = Unsafe.toLinear \x ->
-  case GHC.runRW# $ GHC.unIO (do IO.noDuplicate; do { () <- act; P.pure x }) of
+  case GHC.runRW# $ GHC.unIO (do do { () <- act; P.pure x }) of
     (# _, !a #) -> GHC.lazy a
 
 unsafeStrictPerformIO :: IO a %1 -> a
 {-# INLINE unsafeStrictPerformIO #-}
 unsafeStrictPerformIO = Unsafe.toLinear \act ->
-  case GHC.runRW# $ GHC.unIO do IO.noDuplicate; IO.evaluate P.=<< act of
+  case GHC.runRW# $ GHC.unIO do IO.evaluate P.=<< act of
     (# _, !a #) -> GHC.lazy a
 
 withUnsafeStrictPerformIO :: IO a %1 -> (a -> b) %1 -> b
 {-# INLINE withUnsafeStrictPerformIO #-}
 withUnsafeStrictPerformIO = Unsafe.toLinear2 \act f ->
-  case GHC.runRW# $ GHC.unIO do IO.noDuplicate; do { !a <- act; IO.evaluate (f a) } of
+  case GHC.runRW# $ GHC.unIO do !a <- act; IO.evaluate (f a) of
     (# _, b #) -> GHC.lazy b
 
 freeze :: forall a s. (SV.Storable a) => RW s %1 -> SArray a s -> Ur (SV.Vector a)
@@ -217,7 +217,7 @@ set !rw i a arr@(SArray sz _) =
 unsafeSet :: (SV.Storable a) => RW s %1 -> Int -> a -> SArray a s -> RW s
 {-# NOINLINE unsafeSet #-}
 unsafeSet (RW r w) !i !a (SArray _ !ptr) =
-  pokeElemOff ptr i a `withUnsafeStrictPerformIO_` RW r w
+  do { GHC.noDuplicate; pokeElemOff ptr i a } `withUnsafeStrictPerformIO_` RW r w
 
 type SlicesTo :: forall {s}. s -> s -> s -> ZeroBitType
 newtype SlicesTo s l r = SlicesTo_ GHC.Void#
