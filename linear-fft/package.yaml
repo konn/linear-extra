@@ -1,6 +1,6 @@
-name:                linear-array-extra
+name:                linear-fft
 version:             0.1.0.0
-github:              "konn/linear-array-extra"
+github:              "konn/linear-fft"
 license:             BSD3
 author:              "Hiromi ISHII"
 maintainer:          "konn.jinro_at_gmail.com"
@@ -17,15 +17,12 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/konn/linear-array-extra#readme>
+description:         Please see the README on GitHub at <https://github.com/konn/linear-fft#readme>
 
 dependencies:
 - base >= 4.7 && < 5
 - vector
-- linear-base >= 0.2
-- linear-generics
-- linear-witness
-- primitive
+- deepseq
 
 ghc-options:
 - -Wall
@@ -41,38 +38,41 @@ ghc-options:
 library:
   source-dirs: src
   dependencies:
-  - ghc-prim
+  - integer-logarithms
+  - linear-array-extra
+  - linear-memory
+  - linear-parallel
+  - linear-witness
+  - linear-base
+  - linear-generics
+  - fmlist
+  - optparse-applicative
+  - directory
+  - filepath
 
 executables:
-  linear-array-extra-exe:
-    main:                Main.hs
+  linear-fft:
+    main:                linear-fft.hs
     source-dirs:         app
     ghc-options:
     - -threaded
     - -rtsopts
-    - -with-rtsopts=-N
+    - '"-with-rtsopts=-N --nonmoving-gc"'
+    - -eventlog
     dependencies:
-    - linear-array-extra
+    - linear-fft
 
 tests:
-  linear-array-extra-test:
+  linear-fft-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
     - -threaded
     - -rtsopts
-    - -with-rtsopts=-N
-    - -O2
+    - '"-with-rtsopts=-N --nonmoving-gc"'
     build-tools:
     - tasty-discover
     dependencies:
-    - linear-array-extra
-    - linear-witness-test-utils
-    - containers
-    - dlist
-    - falsify
-    - foldl
-    - linear-base
+    - linear-fft
     - tasty
-    - tasty-hunit
-    - vector
+    - falsify

@@ -31,7 +31,7 @@ jobs:
         plan: ${{fromJSON(needs.ci-enumerate.outputs.plan)}}
       fail-fast: false
     env:
-      cabal-version: 3.10.1.0
+      cabal-version: 3.10.2.0
       cabal: "cabal --project-file=${{matrix.plan.path}}"
       ghc: ${{matrix.plan.ghc}}
       project-file: ${{matrix.plan.path}}
@@ -142,6 +142,7 @@ jobs:
   test:
     name: Test (${{matrix.plan.name}})
     needs: [ci-enumerate, build]
+    continue-on-error: ${{matrix.plan.is_head}}
     strategy:
       matrix:
         plan: ${{fromJSON(needs.ci-enumerate.outputs.plan)}}

@@ -1,0 +1,84 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           linear-fft
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/konn/linear-fft#readme>
+homepage:       https://github.com/konn/linear-fft#readme
+bug-reports:    https://github.com/konn/linear-fft/issues
+author:         Hiromi ISHII
+maintainer:     konn.jinro_at_gmail.com
+copyright:      2023 (c) Hiromi ISHII
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/konn/linear-fft
+
+library
+  exposed-modules:
+      Numeric.FFT.App
+      Numeric.FFT.CooleyTukey.Linear
+  other-modules:
+      Paths_linear_fft
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.7 && <5
+    , deepseq
+    , directory
+    , filepath
+    , fmlist
+    , integer-logarithms
+    , linear-array-extra
+    , linear-base
+    , linear-generics
+    , linear-memory
+    , linear-parallel
+    , linear-witness
+    , optparse-applicative
+    , vector
+  default-language: Haskell2010
+
+executable linear-fft
+  main-is: linear-fft.hs
+  other-modules:
+      Paths_linear_fft
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts "-with-rtsopts=-N --nonmoving-gc" -eventlog
+  build-depends:
+      base >=4.7 && <5
+    , deepseq
+    , linear-fft
+    , vector
+  default-language: Haskell2010
+
+test-suite linear-fft-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Numeric.FFT.CooleyTukey.LinearSpec
+      Paths_linear_fft
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts "-with-rtsopts=-N --nonmoving-gc"
+  build-tool-depends:
+      tasty-discover:tasty-discover
+  build-depends:
+      base >=4.7 && <5
+    , deepseq
+    , falsify
+    , linear-fft
+    , tasty
+    , vector
+  default-language: Haskell2010

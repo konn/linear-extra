@@ -1,6 +1,6 @@
-name:                linear-array-extra
+name:                linear-parallel
 version:             0.1.0.0
-github:              "konn/linear-array-extra"
+github:              "konn/linear-parallel"
 license:             BSD3
 author:              "Hiromi ISHII"
 maintainer:          "konn.jinro_at_gmail.com"
@@ -11,21 +11,20 @@ extra-source-files:
 - CHANGELOG.md
 
 # Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
+synopsis:            Parallel computation interfaces for Linear Haskell
+category:            Control
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/konn/linear-array-extra#readme>
+description:         Please see the README on GitHub at <https://github.com/konn/linear-parallel#readme>
 
 dependencies:
 - base >= 4.7 && < 5
-- vector
-- linear-base >= 0.2
+- linear-array-extra
+- linear-base
 - linear-generics
 - linear-witness
-- primitive
 
 ghc-options:
 - -Wall
@@ -40,39 +39,14 @@ ghc-options:
 
 library:
   source-dirs: src
-  dependencies:
-  - ghc-prim
-
-executables:
-  linear-array-extra-exe:
-    main:                Main.hs
-    source-dirs:         app
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - linear-array-extra
 
 tests:
-  linear-array-extra-test:
+  linear-parallel-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
-    - -O2
-    build-tools:
-    - tasty-discover
     dependencies:
-    - linear-array-extra
-    - linear-witness-test-utils
-    - containers
-    - dlist
-    - falsify
-    - foldl
-    - linear-base
-    - tasty
-    - tasty-hunit
-    - vector
+    - linear-parallel

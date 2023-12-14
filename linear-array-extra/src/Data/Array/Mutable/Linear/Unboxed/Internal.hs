@@ -34,6 +34,7 @@ import qualified Data.Vector.Unboxed.Mutable as MU
 import GHC.Base (runRW#, unIO)
 import GHC.Exts (RealWorld)
 import qualified GHC.Exts as GHC
+import GHC.IO (noDuplicate)
 import Linear.Witness.Token (Linearly)
 import Linear.Witness.Token.Unsafe (HasLinearWitness)
 import Prelude.Linear
@@ -86,13 +87,13 @@ fromList (xs :: [a]) f =
 fill :: (U.Unbox a) => a -> UArray a %1 -> UArray a
 {-# NOINLINE fill #-}
 fill a = Unsafe.toLinear \(UArray arr) ->
-  case runRW# $ unIO $ MU.set arr a of
+  case runRW# $ unIO $ do noDuplicate; MU.set arr a of
     (# _, () #) -> UArray arr
 
 unsafeSet :: (U.Unbox a) => Int -> a -> UArray a %1 -> UArray a
 {-# NOINLINE unsafeSet #-}
 unsafeSet i a = Unsafe.toLinear \arr0@(UArray mu) ->
-  case runRW# (unIO $ MU.unsafeWrite mu i a) of
+  case runRW# (unIO $ do noDuplicate; MU.unsafeWrite mu i a) of
     (# _, () #) -> arr0
 
 size :: (U.Unbox a) => UArray a %1 -> (Ur Int, UArray a)
@@ -108,7 +109,7 @@ unsafeGet i = Unsafe.toLinear \arr0@(UArray mu) ->
 unsafeSlice :: (U.Unbox a) => Int -> Int -> UArray a %1 -> (UArray a, UArray a)
 {-# NOINLINE unsafeSlice #-}
 unsafeSlice start len = Unsafe.toLinear \(UArray mu) ->
-  case runRW# $ unIO $ MU.clone $! MU.unsafeSlice start len mu of
+  case runRW# $ unIO $ do noDuplicate; MU.clone $! MU.unsafeSlice start len mu of
     (# _, mu' #) -> (UArray mu, UArray mu')
 
 unsafeResize :: (U.Unbox a) => Int -> UArray a %1 -> UArray a
