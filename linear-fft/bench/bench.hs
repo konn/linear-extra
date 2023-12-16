@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BlockArguments #-}
 
 module Main (main) where
 
@@ -12,8 +13,8 @@ import Test.Tasty (localOption)
 import Test.Tasty.Bench
 import Test.Tasty.Runners (NumThreads (NumThreads))
 
-numCores :: [Int]
-numCores = [1, 2, 4, 8, 16, 32, 64, 128, 256]
+numWorkers :: [Int]
+numWorkers = [1, 2, 4, 8, 16, 32, 64, 128, 256]
 
 main :: IO ()
 main =
@@ -30,16 +31,36 @@ sample n f =
   S.generate n (\i -> f (-4 + 8 * fromIntegral i / fromIntegral n) :+ 0.0)
 
 scalingBench :: Benchmark
-scalingBench =
+scalingBench = bgroup "scaling" [waeakScalingBench, strongScalingBench]
+
+waeakScalingBench :: Benchmark
+waeakScalingBench =
   bgroup
-    "scaling"
+    "Weak scaling"
     [ bgroup (show size <> "/job") $
       [ env (setNumCapabilities n >> evaluate (force $ sample len fun)) $ \v ->
         bench (show n) $ nf (FFT.fftPar size) v
-      | n <- numCores
+      | n <- numWorkers
       , let !len = n * size
       ]
     | size <- jobSizes
     ]
   where
     jobSizes = [256, 512, 1024, 2048, 4096, 8192]
+
+strongScalingBench :: Benchmark
+strongScalingBench =
+  bgroup
+    "Strong sclaing"
+    [ env (evaluate (force $ sample size fun)) $ \v ->
+      bgroup
+        ("size = " <> show size)
+        [ env (setNumCapabilities caps) \_ ->
+          bench (show caps) $ nf (FFT.fftPar (size `quot` caps)) v
+        | caps <- numWorkers
+        ]
+    | base <- totalSizeBase
+    , let !size = 2 ^ base
+    ]
+  where
+    totalSizeBase = [18 .. 21 :: Int]
