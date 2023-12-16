@@ -71,7 +71,7 @@ test-suite linear-fft-test
       Paths_linear_fft
   hs-source-dirs:
       test
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts "-with-rtsopts=-N --nonmoving-gc"
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -O2 -rtsopts "-with-rtsopts=-N --nonmoving-gc"
   build-tool-depends:
       tasty-discover:tasty-discover
   build-depends:
@@ -80,5 +80,22 @@ test-suite linear-fft-test
     , falsify
     , linear-fft
     , tasty
+    , vector
+  default-language: Haskell2010
+
+benchmark linear-fft-bench
+  type: exitcode-stdio-1.0
+  main-is: bench.hs
+  other-modules:
+      Paths_linear_fft
+  hs-source-dirs:
+      bench
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -O2 "-with-rtsopts=-N1 --nonmoving-gc"
+  build-depends:
+      base >=4.7 && <5
+    , deepseq
+    , linear-fft
+    , tasty
+    , tasty-bench
     , vector
   default-language: Haskell2010

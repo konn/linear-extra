@@ -224,6 +224,7 @@ newtype Eval a = Eval {_unEval :: LIO.IO a}
 -- and disaster comes out.
 runEval :: Eval a %1 -> a
 {-# ANN runEval "HLint: ignore Avoid lambda" #-}
+{-# NOINLINE runEval #-}
 runEval = Unsafe.toLinear \(Eval (LIO.IO k)) ->
   case runRW# (\s -> k (GHC.noDuplicate# s)) of
     (# _, a #) -> lazy a

@@ -68,6 +68,7 @@ tests:
     source-dirs:         test
     ghc-options:
     - -threaded
+    - -O2
     - -rtsopts
     - '"-with-rtsopts=-N --nonmoving-gc"'
     build-tools:
@@ -76,3 +77,18 @@ tests:
     - linear-fft
     - tasty
     - falsify
+
+benchmarks:
+  linear-fft-bench:
+    main:                bench.hs
+    source-dirs:         bench
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -O2
+    - '"-with-rtsopts=-N1 --nonmoving-gc"'
+    dependencies:
+    - linear-fft
+    - tasty
+    - tasty-bench
+    - deepseq
