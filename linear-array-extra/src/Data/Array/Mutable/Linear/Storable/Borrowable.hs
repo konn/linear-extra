@@ -16,7 +16,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE StrictData #-}
-{-# HLINT ignore "Use const" #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -25,7 +24,8 @@
 {-# LANGUAGE UnliftedNewtypes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -funbox-strict-fields #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{- HLINT ignore "Use const" -}
 
 module Data.Array.Mutable.Linear.Storable.Borrowable (
   SArray (),
