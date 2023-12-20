@@ -1,4 +1,5 @@
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -346,8 +347,10 @@ genSlice (fromIntegral -> len) = do
   F.label "% range" [classifyPercent range len]
   pure Slice {..}
 
+#if !MIN_VERSION_linear_base(0,4,0)
 instance (Semigroup a) => PL.Semigroup (Ur a) where
   Ur a <> Ur b = Ur (a <> b)
 
 instance (Monoid a) => PL.Monoid (Ur a) where
   mempty = Ur mempty
+#endif
