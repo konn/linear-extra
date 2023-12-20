@@ -1786,7 +1786,6 @@ constraints: abstract-deque ==0.3,
              linear ==1.22,
              linear-base ==0.4.0,
              linear-circuit ==0.1.0.4,
-             linear-generics ==0.2.2,
              linear-programming ==0.0,
              linebreak ==1.1.0.4,
              linux-capabilities ==0.1.1.0,
@@ -3294,9 +3293,7 @@ constraints: abstract-deque ==0.3,
 
 allow-newer:
   falsify:base, falsify:text,
-  falsify:bytestring, falsify:optparse-applicative,
-  linear-generics:template-haskell,
-  linear-generics:th-abstraction
+  falsify:bytestring, falsify:optparse-applicative
 
 source-repository-package
   type: git
