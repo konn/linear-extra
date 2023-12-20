@@ -39,7 +39,7 @@ module Data.Array.Mutable.Linear.Storable.Borrowable (
   R,
   W,
   RW (..),
-  SuchThat (..),
+  NewArray (..),
   size,
   get,
   unsafeGet,
@@ -77,10 +77,10 @@ import Prelude.Linear.Unsatisfiable (Unsatisfiable, unsatisfiable)
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
 
-{- HLINT ignore SuchThat "Redundant bracket" -}
-type SuchThat :: forall {s}. (s -> Type) -> (s -> Type) -> s -> Type
-data SuchThat f g s where
-  SuchThat :: f s -> g s %1 -> SuchThat f g s
+{- HLINT ignore MkNewArray "Redundant bracket" -}
+type NewArray :: Type -> Type
+data NewArray a where
+  MkNewArray :: SArray a s -> RW s %1 -> NewArray a
 
 data SArray a s where
   SArray :: {-# UNPACK #-} !Int -> {-# UNPACK #-} !(Ptr a) -> SArray a s
@@ -123,18 +123,18 @@ unsafeAllocL ::
   (SV.Storable a) =>
   Int ->
   Linearly %1 ->
-  SuchThat (SArray a) RW s
+  NewArray a
 {-# NOINLINE unsafeAllocL #-}
 unsafeAllocL n l =
   l `lseq` withUnsafeStrictPerformIO (mallocArray n) \ptr ->
-    SArray n ptr `SuchThat` RW R W
+    SArray n ptr `MkNewArray` RW R W
 
 allocL ::
   (HasCallStack, SV.Storable a) =>
   Int ->
   a ->
   Linearly %1 ->
-  SuchThat (SArray a) RW s
+  NewArray a
 {-# NOINLINE allocL #-}
 allocL n a l
   | n < 0 = l `lseq` error ("allocL: negative length: " <> show n)
@@ -146,22 +146,22 @@ allocL n a l
                 pokeElemOff ptr i a P.>> self (i + 1)
           )
           0
-          `withUnsafeStrictPerformIO_` (SArray n ptr `SuchThat` RW R W)
+          `withUnsafeStrictPerformIO_` (SArray n ptr `MkNewArray` RW R W)
 
-fromListL :: (Storable a) => [a] -> Linearly %1 -> SuchThat (SArray a) RW s
+fromListL :: (Storable a) => [a] -> Linearly %1 -> NewArray a
 {-# NOINLINE fromListL #-}
 fromListL (xs :: [a]) l =
   l `lseq`
     let len = P.length xs
      in withUnsafeStrictPerformIO (newArray xs) $ \ptr ->
-          SArray len ptr `SuchThat` RW R W
+          SArray len ptr `MkNewArray` RW R W
 
-fromVectorL :: (Storable a) => SV.Vector a -> Linearly %1 -> SuchThat (SArray a) RW s
+fromVectorL :: (Storable a) => SV.Vector a -> Linearly %1 -> NewArray a
 {-# NOINLINE fromVectorL #-}
 fromVectorL xs l =
-  unsafeAllocL (SV.length xs) l & \(SArray sz ptr `SuchThat` RW R W) ->
+  unsafeAllocL (SV.length xs) l & \(SArray sz ptr `MkNewArray` RW R W) ->
     SV.unsafeWith xs (\src -> copyArray ptr src sz)
-      `withUnsafeStrictPerformIO_` (SArray sz ptr `SuchThat` RW R W)
+      `withUnsafeStrictPerformIO_` (SArray sz ptr `MkNewArray` RW R W)
 
 withUnsafeStrictPerformIO_ :: IO () -> a %1 -> a
 {-# INLINE withUnsafeStrictPerformIO_ #-}
