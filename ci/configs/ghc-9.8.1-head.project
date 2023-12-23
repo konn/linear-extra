@@ -3293,7 +3293,8 @@ constraints: abstract-deque ==0.3,
 
 allow-newer:
   falsify:base, falsify:text,
-  falsify:bytestring, falsify:optparse-applicative
+  falsify:bytestring, falsify:optparse-applicative,
+  derive-storable-plugin:ghc
 
 source-repository-package
   type: git
