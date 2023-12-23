@@ -66,6 +66,7 @@ test-suite linear-memory-test
     , linear-array-extra
     , linear-base
     , linear-memory
+    , linear-parallel
     , linear-witness
     , linear-witness-test-utils
     , tasty

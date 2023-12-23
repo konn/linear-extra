@@ -14,12 +14,14 @@
 module Data.AtomicCounter.LinearSpec (test_AtomicCounter) where
 
 import Control.Concurrent (threadDelay)
+import Control.Parallel.Linear (par)
 import Data.AtomicCounter.Linear
+import qualified Data.Bifunctor.Linear as BiL
 import Data.Foldable (foldMap')
 import qualified Data.Tuple.Linear as TL
 import Foreign.Marshal.Pure.Extra (withPool)
 import GHC.Generics (Generic)
-import Prelude.Linear (Sum (..), Ur (..))
+import Prelude.Linear (Sum (..), Ur (..), (&))
 import qualified Prelude.Linear as PL
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Falsify.Generator (frequency)
@@ -43,7 +45,7 @@ instG =
   frequency
     [ (2, pure Inc)
     , (2, pure Dec)
-    , (1, Wait . fromIntegral <$> G.integral @Word (between (1, 10 ^ (3 :: Int))))
+    , (1, Wait . fromIntegral <$> G.integral @Word (between (1, 500)))
     ]
 
 test_AtomicCounter :: TestTree
@@ -57,6 +59,23 @@ test_AtomicCounter =
               runThread thread1 c1
                 PL.& \c1 -> TL.fst (getCount c1)
         assert $ P.expect (semantics ths) .$ ("actual", resl)
+    , testProperty "Two threads" do
+        thread1 <- genWith (\a -> Just $ "Thread #1: " <> show a) $ G.list (between (0, 50)) instG
+        thread2 <- genWith (\a -> Just $ "Thread #2: " <> show a) $ G.list (between (0, 50)) instG
+        let ths = [thread1, thread2]
+            (ans1, ans2) = withCounter ths \c1 ->
+              PL.dup c1 & \(c1, c2) ->
+                BiL.bimap
+                  (TL.fst PL.. getCount)
+                  (TL.fst PL.. getCount)
+                  ( par
+                      (runThread thread1 c1)
+                      (runThread thread2 c2)
+                  )
+                  PL.& \(Ur !c1, Ur !c2) -> Ur (c1, c2)
+        let expected = semantics ths
+        assert $
+          P.expect (expected, expected) .$ ("thread (#1, #2)", (ans1, ans2))
     ]
 
 withCounter :: [[Instruction]] -> (Counter %1 -> Ur a) %1 -> a
