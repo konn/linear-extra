@@ -10,8 +10,8 @@ import qualified Data.HashMap.Mutable.Linear.Witness as LHM
 import qualified Data.List.Linear as L
 import qualified Data.Map.Strict as Map
 import Data.Unrestricted.Linear (Ur (..), unur)
-import Linear.Witness.Token (besides, linearly)
-import Linear.Witness.Token.TestUtils
+import Linear.Token.Linearly (besides, linearly)
+import Linear.Token.Linearly.TestUtils
 import Prelude.Linear ((&))
 import qualified Test.Falsify.Generator as F
 import Test.Falsify.Predicate ((.$))

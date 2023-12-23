@@ -70,8 +70,8 @@ import qualified GHC.IO as GHC
 import qualified GHC.IO as IO
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits
-import Linear.Witness.Token
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import Linear.Token.Linearly
+import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear
 import Prelude.Linear.Unsatisfiable (Unsatisfiable, unsatisfiable)
 import qualified Unsafe.Linear as Unsafe

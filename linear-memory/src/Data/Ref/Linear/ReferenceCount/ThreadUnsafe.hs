@@ -40,8 +40,8 @@ import qualified Data.Replicator.Linear as Rep
 import Data.Word
 import Foreign.Marshal.Pure (Box, Pool, Representable)
 import qualified Foreign.Marshal.Pure.Extra as Box
-import Linear.Witness.Token
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import Linear.Token.Linearly
+import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P

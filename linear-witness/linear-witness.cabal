@@ -4,17 +4,17 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 
-name:           linear-witness
-version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/konn/linear-witness#readme>
-homepage:       https://github.com/konn/linear-witness#readme
-bug-reports:    https://github.com/konn/linear-witness/issues
-author:         Hiromi ISHII
-maintainer:     konn.jinro_at_gmail.com
-copyright:      2023 (c) Hiromi ISHII
-license:        BSD3
-license-file:   LICENSE
-build-type:     Simple
+name:               linear-witness
+version:            0.1.0.0
+description:        Please see the README on GitHub at <https://github.com/konn/linear-witness#readme>
+homepage:           https://github.com/konn/linear-witness#readme
+bug-reports:        https://github.com/konn/linear-witness/issues
+author:             Hiromi ISHII
+maintainer:         konn.jinro_at_gmail.com
+copyright:          2023 (c) Hiromi ISHII
+license:            BSD3
+license-file:       LICENSE
+build-type:         Simple
 extra-source-files:
     README.md
     CHANGELOG.md
@@ -30,9 +30,9 @@ library
       Data.HashMap.Mutable.Linear.Witness
       Data.Set.Mutable.Linear.Witness
       Data.Vector.Mutable.Linear.Witness
-      Linear.Witness.Token
-      Linear.Witness.Token.Internal
-      Linear.Witness.Token.Unsafe
+      Linear.Token.Linearly
+      Linear.Token.Linearly.Internal
+      Linear.Token.Linearly.Unsafe
   other-modules:
       Paths_linear_witness
   hs-source-dirs:

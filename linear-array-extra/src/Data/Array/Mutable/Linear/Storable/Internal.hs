@@ -42,8 +42,8 @@ import Foreign.Storable.Generic (GStorable)
 import GHC.Base (runRW#, unIO)
 import GHC.Generics (Generic)
 import GHC.IO (noDuplicate)
-import Linear.Witness.Token (Linearly, linearly)
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import Linear.Token.Linearly (Linearly, linearly)
+import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P

@@ -4,17 +4,17 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 
-name:           linear-witness-test-utils
-version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/konn/linear-witness-test#readme>
-homepage:       https://github.com/konn/linear-witness-test#readme
-bug-reports:    https://github.com/konn/linear-witness-test/issues
-author:         Hiromi ISHII
-maintainer:     konn.jinro_at_gmail.com
-copyright:      2023 (c) Hiromi ISHII
-license:        BSD3
-license-file:   LICENSE
-build-type:     Simple
+name:               linear-witness-test-utils
+version:            0.1.0.0
+description:        Please see the README on GitHub at <https://github.com/konn/linear-witness-test#readme>
+homepage:           https://github.com/konn/linear-witness-test#readme
+bug-reports:        https://github.com/konn/linear-witness-test/issues
+author:             Hiromi ISHII
+maintainer:         konn.jinro_at_gmail.com
+copyright:          2023 (c) Hiromi ISHII
+license:            BSD3
+license-file:       LICENSE
+build-type:         Simple
 extra-source-files:
     README.md
     CHANGELOG.md
@@ -25,7 +25,7 @@ source-repository head
 
 library
   exposed-modules:
-      Linear.Witness.Token.TestUtils
+      Linear.Token.Linearly.TestUtils
   other-modules:
       Paths_linear_witness_test_utils
   hs-source-dirs:

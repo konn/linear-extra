@@ -40,7 +40,7 @@ import Data.Complex
 import Data.Function (fix)
 import qualified Data.Vector.Storable as S
 import GHC.Stack (HasCallStack)
-import Linear.Witness.Token (besides, linearly)
+import Linear.Token.Linearly (besides, linearly)
 import Math.NumberTheory.Logarithms (intLog2)
 import Prelude.Linear hiding (Num, (*), (+))
 import Prelude ((*), (+))
