@@ -8,4 +8,4 @@ Missing mutation combinators for linear resources allocated off-heap.
 
 - [`Foreign.Marshall.Pure.Extra`](./src/Foreign/Marshal/Pure/Extra.hs): missing combinators to manipulate and inspect `Box a`-values from `linear-base`, allocated off-heap, without releasing it.
 - [`Data.Ref.Linear.ReferenceCount.ThreadUnsafe`](./src/Data/Ref/Linear/ReferenceCount/ThreadUnsafe.hs): Thread-*unsafe* reference-counted, strong and weak mutable references.
-- [`Data.AtomicCounter.Linear`](./src/Data/AtomicCounter/Linear.hs): **Thread-safe** atomic counter.
+- [`Data.AtomicCounter.Linear`](./src/Data/AtomicCounter/Linear.hs): __Thread-safe__ atomic counter.
