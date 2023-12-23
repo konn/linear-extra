@@ -52,6 +52,7 @@ test-suite linear-memory-test
   main-is: Spec.hs
   other-modules:
       Data.AtomicCounter.LinearSpec
+      Foreign.Marshal.Pure.ExtraSpec
       Paths_linear_memory
   hs-source-dirs:
       test
