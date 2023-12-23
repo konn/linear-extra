@@ -6,4 +6,4 @@ This is just a tentative workaround until [Linear Constraints](https://github.co
 ## Contents
 
 - [`Linear.Witness.Token`](./src/Linear/Witness/Token.hs) provides `Linearly` constraints and related combinators.
-- [`Data.*`](./src/Data) provides allocation primitives for containers provided in `linear-base`
+- [`Data.**.Linear.Witness`](./src/Data) provides allocation primitives for containers provided in `linear-base`
