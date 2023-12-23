@@ -33,7 +33,7 @@ module Numeric.FFT.CooleyTukey.Linear (
 ) where
 
 import Control.Parallel.Linear (par)
-import Data.Array.Mutable.Linear.Storable.Borrowable (NewArray (..), RW (..), SArray)
+import Data.Array.Mutable.Linear.Storable.Borrowable (RW (..), SArray)
 import qualified Data.Array.Mutable.Linear.Storable.Borrowable as SA
 import Data.Bits (bit, popCount, shiftR)
 import Data.Complex
@@ -47,12 +47,12 @@ import Prelude ((*), (+))
 
 fft :: (HasCallStack) => S.Vector (Complex Double) -> S.Vector (Complex Double)
 fft inp = unur $ linearly \l ->
-  SA.fromVectorL inp l & \(MkNewArray inp rw) ->
+  SA.fromVectorL inp l & \(SA.MkNew inp rw) ->
     SA.freeze (fftRaw rw inp) inp
 
 fftPar :: (HasCallStack) => Int -> S.Vector (Complex Double) -> S.Vector (Complex Double)
 fftPar thresh inp = unur $ linearly \l ->
-  SA.fromVectorL inp l & \(MkNewArray inp rw) ->
+  SA.fromVectorL inp l & \(SA.MkNew inp rw) ->
     SA.freeze (fftRawPar rw thresh inp) inp
 
 fftRaw :: forall s. (HasCallStack) => RW s %1 -> SArray (Complex Double) s -> RW s
@@ -155,7 +155,7 @@ reverseBit (RW r w) v =
     let !n = intLog2 len
         !m = bit $ n `shiftR` 1
      in besides (RW r w) (SA.allocL m 0)
-          & \(MkNewArray (table :: SArray Int table) rwTable, rw) ->
+          & \(SA.MkNew (table :: SArray Int table) rwTable, rw) ->
             buildTable n rwTable table & \(RW rTbl wTbl) ->
               forN
                 (m - 1)

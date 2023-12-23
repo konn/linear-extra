@@ -30,6 +30,8 @@ library
       Data.HashMap.Mutable.Linear.Witness
       Data.Set.Mutable.Linear.Witness
       Data.Vector.Mutable.Linear.Witness
+      Linear.Token.Borrowing
+      Linear.Token.Borrowing.Unsafe
       Linear.Token.Linearly
       Linear.Token.Linearly.Internal
       Linear.Token.Linearly.Unsafe
