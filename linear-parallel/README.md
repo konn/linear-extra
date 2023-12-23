@@ -1,5 +1,9 @@
 # linear-parallel - Parallel Computation Interfaces for Linear Haskell
 
+This package provides linear pure parallelism utilities.
+
+See [`linear-fft`](../linear-fft) for example usage.
+
 ## Design Notes
 
 With the linear setting, pure combinator `runEval` can contain arbitrary pure expression that calls destructive operations under the hood.
