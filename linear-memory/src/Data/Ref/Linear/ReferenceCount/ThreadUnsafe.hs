@@ -134,7 +134,7 @@ set a (Rc (RcBox (# strong, weak, box #))) =
     Rc (RcBox (# strong, weak, box #))
 
 -- | __Warning__: This is non-atomic!
-modify :: (Representable a) => (a -> (a, b)) -> Rc a %1 -> (Ur b, Rc a)
+modify :: (Representable a) => (a %1 -> (a, Ur b)) -> Rc a %1 -> (Ur b, Rc a)
 {-# INLINE modify #-}
 modify f (Rc (RcBox (# strong, weak, box #))) =
   Box.modify f box & \(urb, box) ->

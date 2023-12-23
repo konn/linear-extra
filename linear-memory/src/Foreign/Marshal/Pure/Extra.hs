@@ -101,26 +101,26 @@ instance Representable Float where
   toKnown = id
   ofKnown = id
 
-get :: Representable a => Box a %1 -> (Ur a, Box a)
+get :: (Representable a) => Box a %1 -> (Ur a, Box a)
 {-# NOINLINE get #-}
 get = Unsafe.toLinear \box@(Box _ b) ->
   case runRW# (unIO (reprPeek b)) of
     (# _, a #) -> (Ur a, box)
 
 -- | __Warning__: non-atomic
-modify :: Representable a => (a -> (a, b)) -> Box a %1 -> (Ur b, Box a)
+modify :: (Representable a) => (a %1 -> (a, Ur b)) -> Box a %1 -> (Ur b, Box a)
 {-# INLINE modify #-}
 modify f b =
-  get b & \(Ur a, box) ->
-    (a `seq` f a) & \(!a, !b) -> (Ur b, set a box)
+  get b & \(Ur !a, box) ->
+    f a & \(!a, urb) -> (urb, set a box)
 
 -- | __Warning__: non-atomic
-modify_ :: Representable a => (a -> a) -> Box a %1 -> Box a
+modify_ :: (Representable a) => (a -> a) -> Box a %1 -> Box a
 modify_ f b =
   get b & \(Ur a, box) ->
     set (a `seq` f a) box
 
-set :: Representable a => a -> Box a %1 -> Box a
+set :: (Representable a) => a -> Box a %1 -> Box a
 {-# NOINLINE set #-}
 set !a = Unsafe.toLinear \(Box poolPtr ptr) ->
   case runRW# (unIO (reprPoke ptr a)) of
