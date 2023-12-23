@@ -19,8 +19,8 @@ import Data.AtomicCounter.Linear
 import qualified Data.Bifunctor.Linear as BiL
 import Data.Foldable (foldMap')
 import qualified Data.Tuple.Linear as TL
-import Foreign.Marshal.Pure.Extra (withPool)
 import GHC.Generics (Generic)
+import Linear.Witness.Token (linearly)
 import Prelude.Linear (Sum (..), Ur (..), (&))
 import qualified Prelude.Linear as PL
 import System.IO.Unsafe (unsafePerformIO)
@@ -45,7 +45,7 @@ instG =
   frequency
     [ (2, pure Inc)
     , (2, pure Dec)
-    , (1, Wait . fromIntegral <$> G.integral @Word (between (1, 500)))
+    , (1, Wait . fromIntegral <$> G.integral @Word (between (1, 1000)))
     ]
 
 test_AtomicCounter :: TestTree
@@ -81,7 +81,7 @@ test_AtomicCounter =
 withCounter :: [[Instruction]] -> (Counter %1 -> Ur a) %1 -> a
 withCounter instrs f =
   let off = calcOffs instrs
-   in PL.unur PL.$ withPool PL.$ f PL.. newCounterWith off
+   in PL.unur PL.$ linearly PL.$ f PL.. newCounterWith off
 
 calcOffs :: [[Instruction]] -> Word
 calcOffs = getSum . foldMap' (Sum . fromIntegral . length . filter (== Dec))

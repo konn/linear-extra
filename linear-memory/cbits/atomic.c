@@ -31,3 +31,13 @@ HsWord sync_fetch_sub(HsWord mba[], HsInt i, HsWord a)
 {
   return __sync_fetch_and_sub(&mba[i], a);
 }
+
+HsWord sync_add_fetch(HsWord mba[], HsInt i, HsWord a)
+{
+  return __sync_add_and_fetch(&mba[i], a);
+}
+
+HsWord sync_sub_fetch(HsWord mba[], HsInt i, HsWord a)
+{
+  return __sync_sub_and_fetch(&mba[i], a);
+}
