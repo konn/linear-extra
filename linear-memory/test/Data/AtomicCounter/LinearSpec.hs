@@ -19,7 +19,6 @@ import qualified Data.Bifunctor.Linear as BiL
 import Data.Foldable (foldMap')
 import qualified Data.Tuple.Linear as TL
 import GHC.Generics (Generic)
-import Linear.Witness.Token (linearly)
 import Prelude.Linear (Sum (..), Ur (..), (&))
 import qualified Prelude.Linear as PL
 import System.IO.Unsafe (unsafePerformIO)
@@ -54,7 +53,7 @@ test_AtomicCounter =
     [ testProperty "Single thread" do
         thread1 <- gen $ G.list (between (0, 50)) instG
         let ths = [thread1]
-            resl = withCounter ths \c1 ->
+            resl = withThreadCounters ths \c1 ->
               runThread thread1 c1
                 PL.& \c1 -> TL.fst (getCount c1)
         assert $ P.expect (semantics ths) .$ ("actual", resl)
@@ -62,7 +61,7 @@ test_AtomicCounter =
         thread1 <- genWith (\a -> Just $ "Thread #1: " <> show a) $ G.list (between (0, 50)) instG
         thread2 <- genWith (\a -> Just $ "Thread #2: " <> show a) $ G.list (between (0, 50)) instG
         let ths = [thread1, thread2]
-            (ans1, ans2) = withCounter ths \c1 ->
+            (ans1, ans2) = withThreadCounters ths \c1 ->
               PL.dup c1 & \(c1, c2) ->
                 BiL.bimap
                   (TL.fst PL.. getCount)
@@ -81,7 +80,7 @@ test_AtomicCounter =
         thread3 <- genWith (\a -> Just $ "Thread #2: " <> show a) $ G.list (between (0, 50)) instG
         thread4 <- genWith (\a -> Just $ "Thread #4: " <> show a) $ G.list (between (0, 50)) instG
         let ths = [thread1, thread2, thread3, thread4]
-            anss = withCounter ths \c1 ->
+            anss = withThreadCounters ths \c1 ->
               BiL.bimap PL.dup PL.dup (PL.dup c1) & \((c1, c2), (c3, c4)) ->
                 BiL.bimap
                   ( BiL.bimap
@@ -105,10 +104,10 @@ test_AtomicCounter =
           P.expect (expected, expected, expected, expected) .$ ("threads", anss)
     ]
 
-withCounter :: [[Instruction]] -> (Counter %1 -> Ur a) %1 -> a
-withCounter instrs f =
+withThreadCounters :: [[Instruction]] -> (Counter %1 -> Ur a) %1 -> a
+withThreadCounters instrs f =
   let off = calcOffs instrs
-   in PL.unur PL.$ linearly PL.$ f PL.. newCounterWith off
+   in PL.unur PL.$ withCounterCapacity off f
 
 calcOffs :: [[Instruction]] -> Word
 calcOffs = getSum . foldMap' (Sum . fromIntegral . length . filter (== Dec))

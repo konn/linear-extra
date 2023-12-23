@@ -48,6 +48,9 @@ library:
   - focus
   - stm
   - hashable
+  - derive-storable
+  - derive-storable-plugin
+
 
 tests:
   linear-memory-test:

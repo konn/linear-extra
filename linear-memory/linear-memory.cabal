@@ -38,6 +38,8 @@ library
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , derive-storable
+    , derive-storable-plugin
     , focus
     , hashable
     , linear-array-extra
