@@ -41,10 +41,12 @@ import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
 
 -- Memory layout: |duplicate count|internal count|
+-- FIXME: current impleentation is not exception-resilient.
+
+-- | Thread-safe atomic counter.
 newtype Counter = Counter (Ptr Word)
   deriving newtype (Storable, Representable)
 
--- | FIXME: This is terriblly false!!!
 instance Consumable Counter where
   consume = Unsafe.toLinear \(Counter ptr) ->
     unsafePerformIO do
@@ -52,7 +54,6 @@ instance Consumable Counter where
       P.when (n P.== 0) $ free ptr
   {-# NOINLINE consume #-}
 
--- | FIXME: This is terriblly false!!!
 instance Dupable Counter where
   dup2 :: Counter %1 -> (Counter, Counter)
   dup2 = Unsafe.toLinear \c@(Counter ptr) ->
