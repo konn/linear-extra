@@ -43,6 +43,7 @@ library
       Data.Vector.Mutable.Linear.Extra
       Data.Vector.Mutable.Linear.Generic
       Data.Vector.Mutable.Linear.Unboxed
+      Data.Vector.Mutable.Nested.Linear
   other-modules:
       Paths_linear_array_extra
   hs-source-dirs:

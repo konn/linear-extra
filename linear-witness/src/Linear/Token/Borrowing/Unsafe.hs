@@ -33,6 +33,8 @@ module Linear.Token.Borrowing.Unsafe (
   New (..),
   unsafeMkNew,
   unsafeConsumeRW,
+  unsafeConsumeR,
+  unsafeConsumeW,
 ) where
 
 import Data.Kind (Type)
@@ -94,3 +96,9 @@ unsafeMkNew mk lin = lin `lseq` MkNew mk unsafeRW
 
 unsafeConsumeRW :: RW s %1 -> ()
 unsafeConsumeRW (RW R W) = ()
+
+unsafeConsumeR :: R s %1 -> ()
+unsafeConsumeR R = ()
+
+unsafeConsumeW :: W s %1 -> ()
+unsafeConsumeW W = ()
