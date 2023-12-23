@@ -33,7 +33,7 @@ import Foreign.Atomic.Internal
 import Foreign.Marshal.Array
 import Foreign.Marshal.Pure.Extra (Representable)
 import GHC.Exts
-import GHC.IO (unsafeDupablePerformIO)
+import GHC.IO (uninterruptibleMask_, unsafeDupablePerformIO)
 import Linear.Witness.Token
 import Prelude.Linear
 import System.IO.Unsafe (unsafePerformIO)
@@ -49,7 +49,7 @@ newtype Counter = Counter (Ptr Word)
 
 instance Consumable Counter where
   consume = Unsafe.toLinear \(Counter ptr) ->
-    unsafePerformIO do
+    unsafePerformIO $ uninterruptibleMask_ do
       n <- subFetchWordOffset ptr 0 1
       P.when (n P.== 0) $ free ptr
   {-# NOINLINE consume #-}
