@@ -1,0 +1,7 @@
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+      { "cmd": "hpack", "isAsync": true, "match": "(package\\.yaml|\\.l?hs)$" }
+    ]
+  }
+}
