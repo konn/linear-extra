@@ -5,7 +5,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE LinearTypes #-}
-{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UnboxedTuples #-}
@@ -72,10 +71,38 @@ test_AtomicCounter =
                       (runThread thread1 c1)
                       (runThread thread2 c2)
                   )
-                  PL.& \(Ur !c1, Ur !c2) -> Ur (c1, c2)
+                  PL.& \(Ur c1, Ur c2) -> Ur (c1, c2)
         let expected = semantics ths
         assert $
           P.expect (expected, expected) .$ ("thread (#1, #2)", (ans1, ans2))
+    , testProperty "Four threads" do
+        thread1 <- genWith (\a -> Just $ "Thread #1: " <> show a) $ G.list (between (0, 50)) instG
+        thread2 <- genWith (\a -> Just $ "Thread #2: " <> show a) $ G.list (between (0, 50)) instG
+        thread3 <- genWith (\a -> Just $ "Thread #2: " <> show a) $ G.list (between (0, 50)) instG
+        thread4 <- genWith (\a -> Just $ "Thread #4: " <> show a) $ G.list (between (0, 50)) instG
+        let ths = [thread1, thread2, thread3, thread4]
+            anss = withCounter ths \c1 ->
+              BiL.bimap PL.dup PL.dup (PL.dup c1) & \((c1, c2), (c3, c4)) ->
+                BiL.bimap
+                  ( BiL.bimap
+                      (TL.fst PL.. getCount)
+                      (TL.fst PL.. getCount)
+                  )
+                  ( BiL.bimap
+                      (TL.fst PL.. getCount)
+                      (TL.fst PL.. getCount)
+                  )
+                  ( par
+                      (runThread thread1 c1)
+                      (runThread thread2 c2)
+                      `par` par
+                        (runThread thread3 c3)
+                        (runThread thread4 c4)
+                  )
+                  PL.& \((Ur c1, Ur c2), (Ur c3, Ur c4)) -> Ur (c1, c2, c3, c4)
+        let expected = semantics ths
+        assert $
+          P.expect (expected, expected, expected, expected) .$ ("threads", anss)
     ]
 
 withCounter :: [[Instruction]] -> (Counter %1 -> Ur a) %1 -> a
