@@ -13,6 +13,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -20,21 +21,31 @@
 {-# OPTIONS_GHC -Wno-name-shadowing -funbox-strict-fields #-}
 
 module Data.Vector.Mutable.Nested.Linear (
-  PArray (..),
+  PVector (..),
   RW (..),
   R,
   W,
   New (..),
-  NewPArray,
+  NewPVector,
+  Freeable (..),
   emptyL,
   size,
+  capacity,
   lendMut,
   unsafeLendMut,
   lend,
   unsafeLend,
+  push,
 ) where
 
+import qualified Control.Exception as P
+import Control.Monad (when)
+import Data.Function (fix)
 import Data.Kind
+import Data.Primitive.Array (MutableArray)
+import qualified Data.Primitive.Array as MA
+import Data.Primitive.MutVar (MutVar, newMutVar)
+import qualified Data.Primitive.MutVar as MV
 import Data.Primitive.PrimArray (MutablePrimArray)
 import qualified Data.Primitive.PrimArray as PA
 import GHC.Exts (Any)
@@ -54,18 +65,33 @@ newtype Some p = Some_ (p Any)
 toSome :: p a %1 -> Some p
 toSome = Some_ . Unsafe.coerce
 
-withSome :: Some p %1 -> (forall a. p a %1 -> b) %1 -> b
-withSome (Some_ p) f = f (Unsafe.coerce p)
-
-type NewPArray p = New (PArray p)
+type NewPVector p = New (PVector p)
 
 -- | Positional, nested array
-type PArray :: (Location -> Type) -> Location -> Type
-data PArray p n where
-  PArray ::
+type PVector :: (Location -> Type) -> Location -> Type
+data PVector p n where
+  PVector ::
     {-# UNPACK #-} !(MutablePrimArray RealWorld Int) ->
-    !(MutableArray# RealWorld (Some p)) ->
-    PArray p n
+    -- | N.B. We need indirection here because we want to be able to grow/shrink vectors
+    !(MutVar RealWorld (MutableArray RealWorld (Some p))) ->
+    PVector p n
+
+instance (Freeable p) => Freeable (PVector p) where
+  free = freePArray
+  {-# INLINE free #-}
+
+freePArray :: (Freeable p) => RW n %1 -> PVector p n -> ()
+{-# NOINLINE freePArray #-}
+freePArray (RW r w) vec@(PVector _ arr) =
+  size r vec & \(Ur n, r) ->
+    unsafeConsumeRW (RW r w) `lseq` unsafeStrictPerformIO do
+      fix
+        ( \self !i -> when (i < n) do
+            Some_ p <- flip MA.readArray i P.=<< MV.readMutVar arr
+            () <- P.evaluate (free unsafeRW p)
+            self (i + 1)
+        )
+        0
 
 withUnsafeStrictPerformIO_ :: IO () -> a %1 -> a
 {-# INLINE withUnsafeStrictPerformIO_ #-}
@@ -85,37 +111,45 @@ withUnsafeStrictPerformIO = Unsafe.toLinear2 \act f ->
   case GHC.runRW# $ GHC.unIO do !a <- act; IO.evaluate (f a) of
     (# _, b #) -> GHC.lazy b
 
-emptyL :: Linearly %1 -> NewPArray p
-emptyL l = case GHC.runRW# (newArray# 0# undefined) of
-  (# !_, marr #) ->
-    withUnsafeStrictPerformIO
-      (PA.unsafeThawPrimArray (PA.primArrayFromList [0]))
-      \pa -> unsafeMkNew (PArray pa marr) l
+emptyL :: Linearly %1 -> NewPVector p
+emptyL l = withUnsafeStrictPerformIO
+  ( (,)
+      P.<$> PA.unsafeThawPrimArray (PA.primArrayFromList [0])
+      P.<*> (newMutVar P.=<< MA.newArray 0 (error "emptyL: uninitialized array element"))
+  )
+  \(mlen, body) -> unsafeMkNew (PVector mlen body) l
 {-# NOINLINE emptyL #-} -- prevents runRW# from floating outwards
 
-size :: R s %1 -> PArray p s -> (Ur Int, R s)
-size r (PArray msize _) =
-  (Ur (IO.unsafePerformIO (PA.readPrimArray msize 0)), r)
+size :: R s %1 -> PVector p s -> (Ur Int, R s)
+size r (PVector msize _) =
+  (Ur (IO.unsafeDupablePerformIO (PA.readPrimArray msize 0)), r)
 {-# NOINLINE size #-}
+
+capacity :: R s %1 -> PVector p s -> (Ur Int, R s)
+capacity r (PVector _ marr) =
+  withUnsafeStrictPerformIO (MA.sizeofMutableArray P.<$> MV.readMutVar marr) \sz ->
+    (Ur sz, r)
+{-# NOINLINE capacity #-}
 
 unsafeLend ::
   R s %1 ->
   Int ->
-  PArray p s ->
+  PVector p s ->
   (forall n. R n %1 -> p n -> (a, R n)) %1 ->
   (a, R s)
-unsafeLend r (GHC.I# i) (PArray _ marr) f =
-  unsafeConsumeR r `lseq` case GHC.runRW# (readArray# marr i) of
-    (# !_, Some_ !p #) ->
-      f unsafeR p & \(a, r) ->
-        unsafeConsumeR r `lseq` (a, unsafeR)
+unsafeLend r i (PVector _ marr) f =
+  unsafeConsumeR r `lseq`
+    withUnsafeStrictPerformIO (flip MA.readArray i P.=<< MV.readMutVar marr) \case
+      Some_ !p ->
+        f unsafeR p & \(a, r) ->
+          unsafeConsumeR r `lseq` (a, unsafeR)
 {-# NOINLINE unsafeLend #-}
 
 lend ::
   (HasCallStack) =>
   R s %1 ->
   Int ->
-  PArray p s ->
+  PVector p s ->
   (forall n. R n %1 -> p n -> (a, R n)) %1 ->
   (a, R s)
 {-# INLINEABLE lend #-}
@@ -128,21 +162,22 @@ lend r i pa f =
 unsafeLendMut ::
   RW s %1 ->
   Int ->
-  PArray p s ->
+  PVector p s ->
   (forall n. RW n %1 -> p n -> (a, RW n)) %1 ->
   (a, RW s)
-unsafeLendMut rw (GHC.I# i) (PArray _ marr) f =
-  unsafeConsumeRW rw `lseq` case GHC.runRW# (readArray# marr i) of
-    (# !_, Some_ !p #) ->
-      f unsafeRW p & \(a, rw) ->
-        unsafeConsumeRW rw `lseq` (a, unsafeRW)
+unsafeLendMut rw i (PVector _ marr) f =
+  unsafeConsumeRW rw `lseq`
+    withUnsafeStrictPerformIO (flip MA.readArray i P.=<< MV.readMutVar marr) \case
+      Some_ !p ->
+        f unsafeRW p & \(a, rw) ->
+          unsafeConsumeRW rw `lseq` (a, unsafeRW)
 {-# NOINLINE unsafeLendMut #-}
 
 lendMut ::
   (HasCallStack) =>
   RW s %1 ->
   Int ->
-  PArray p s ->
+  PVector p s ->
   (forall n. RW n %1 -> p n -> (a, RW n)) %1 ->
   (a, RW s)
 {-# INLINEABLE lendMut #-}
@@ -151,3 +186,66 @@ lendMut (RW r w) i pa f =
     if i < n
       then unsafeLendMut (RW r w) i pa f
       else error "lendMut: index out of bounds" r w f
+
+{- | Grows the vector to the closest power of growthFactor to
+fit at least n more elements.
+-}
+growToFit :: RW s %1 -> Int -> PVector a s -> RW s
+growToFit (RW r w) n vec =
+  capacity r vec & \(Ur cap, r) ->
+    size r vec & \(Ur s', r) ->
+      if s' + n <= cap
+        then RW r w
+        else
+          let
+            -- Calculate the closest power of growth factor
+            -- larger than required size.
+            newSize =
+              constGrowthFactor -- This constant is defined above.
+                ^ ceiling @Double @Int
+                  ( logBase
+                      (fromIntegral constGrowthFactor)
+                      (fromIntegral (s' + n)) -- this is always
+                      -- > 0 because of
+                      -- the if condition
+                  )
+           in
+            unsafeResize (RW r w) newSize vec
+
+constGrowthFactor :: Int
+constGrowthFactor = 2
+
+{- | Resize the vector to a non-negative size. In-range elements are preserved,
+the possible new elements are bottoms.
+-}
+unsafeResize :: RW s %1 -> Int -> PVector a s -> RW s
+{-# NOINLINE unsafeResize #-}
+unsafeResize (RW r w) newSize pv@(PVector msize ma) =
+  size r pv & \(Ur size', r) ->
+    withUnsafeStrictPerformIO_
+      ( do
+          -- Update the size reference
+          PA.writePrimArray msize 0 (min size' newSize)
+          -- Resize the body array
+          old <- MV.readMutVar ma
+          new <- MA.newArray newSize (error "unsafeResize: uninitialized array element")
+          MA.copyMutableArray new 0 old 0 (min size' newSize)
+          MV.writeMutVar ma new
+      )
+      (RW r w)
+
+{- | Insert at the end of the vector. This will grow the vector if there
+is no empty space.
+-}
+push :: RW n %1 -> RW s %1 -> p n -> PVector p s -> RW s
+push rwP rw x vec@(PVector s arr) =
+  unsafeConsumeRW rwP `lseq`
+    growToFit rw 1 vec & \(RW r w) ->
+      size r vec & \(Ur !n, r) ->
+        withUnsafeStrictPerformIO_
+          ( do
+              PA.writePrimArray s 0 $! n + 1
+              arr <- MV.readMutVar arr
+              MA.writeArray arr n (toSome x)
+          )
+          (RW r w)

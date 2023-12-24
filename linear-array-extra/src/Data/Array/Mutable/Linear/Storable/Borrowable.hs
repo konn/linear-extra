@@ -151,9 +151,13 @@ freeze = GHC.noinline $ \rw (SArray l ptr) ->
     `withUnsafeStrictPerformIO` \fptr ->
       unsafeConsumeRW rw `lseq` Ur (SV.unsafeFromForeignPtr0 fptr l)
 
-free :: RW s %1 -> SArray a s -> ()
-{-# NOINLINE free #-}
-free rw (SArray _ mu) = unsafeConsumeRW rw `lseq` unsafeStrictPerformIO (F.free mu)
+instance Freeable (SArray a) where
+  free = freeSA
+  {-# INLINE free #-}
+
+freeSA :: RW s %1 -> SArray a s -> ()
+{-# NOINLINE freeSA #-}
+freeSA rw (SArray _ mu) = unsafeConsumeRW rw `lseq` unsafeStrictPerformIO (F.free mu)
 
 size :: R s %1 -> SArray a s -> (Ur Int, R s)
 {-# NOINLINE size #-}

@@ -20,6 +20,7 @@
 
 module Linear.Token.Borrowing (
   Location,
+  Freeable (..),
   R,
   W,
   RW (..),

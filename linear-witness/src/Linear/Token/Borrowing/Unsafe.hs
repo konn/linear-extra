@@ -35,9 +35,10 @@ module Linear.Token.Borrowing.Unsafe (
   unsafeConsumeRW,
   unsafeConsumeR,
   unsafeConsumeW,
+  Freeable (..),
 ) where
 
-import Data.Kind (Type)
+import Data.Kind (Constraint, Type)
 import GHC.TypeLits
 import Linear.Token.Linearly (Linearly)
 import Linear.Token.Linearly.Unsafe (HasLinearWitness)
@@ -102,3 +103,7 @@ unsafeConsumeR R = ()
 
 unsafeConsumeW :: W s %1 -> ()
 unsafeConsumeW W = ()
+
+type Freeable :: (Location -> Type) -> Constraint
+class Freeable p where
+  free :: RW n %1 -> p n -> ()
