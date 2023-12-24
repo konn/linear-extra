@@ -36,6 +36,10 @@ module Data.Vector.Mutable.Nested.Linear (
   lend,
   unsafeLend,
   push,
+  foldl',
+  ifoldl',
+  foldWith,
+  ifoldWith,
 ) where
 
 import qualified Control.Exception as P
@@ -56,7 +60,7 @@ import GHC.Prim
 import GHC.Stack (HasCallStack)
 import Linear.Token.Borrowing.Unsafe
 import Linear.Token.Linearly
-import Prelude.Linear hiding (Any)
+import Prelude.Linear hiding (Any, foldl')
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
 
@@ -249,3 +253,89 @@ push rwP rw x vec@(PVector s arr) =
               MA.writeArray arr n (toSome x)
           )
           (RW r w)
+
+foldl' :: R s %1 -> (forall n. a -> R n %1 -> p n -> (Ur a, R n)) -> a -> PVector p s -> (Ur a, R s)
+{-# INLINE foldl' #-}
+foldl' r f z vec =
+  size r vec & \(Ur !n, r) ->
+    fix
+      ( \self !i !z r ->
+          if i < n
+            then
+              lend r i vec (f z) & \case
+                (Ur !z, r) -> self (i + 1) z r
+            else (Ur z, r)
+      )
+      0
+      z
+      r
+
+ifoldl' :: R s %1 -> (forall n. a -> Int -> R n %1 -> p n -> (Ur a, R n)) -> a -> PVector p s -> (Ur a, R s)
+{-# INLINE ifoldl' #-}
+ifoldl' r f z vec =
+  size r vec & \(Ur !n, r) ->
+    fix
+      ( \self !i !z r ->
+          if i < n
+            then
+              lend r i vec (f z i) & \case
+                (Ur !z, r) -> self (i + 1) z r
+            else (Ur z, r)
+      )
+      0
+      z
+      r
+
+-- | Strict left-fold, to be used with @purely@ from @foldl@ package.
+foldWith ::
+  (forall n. RW n %1 -> p n -> a) ->
+  RW s %1 ->
+  (x -> a -> x) ->
+  x ->
+  (x -> b) ->
+  PVector p s ->
+  b
+{-# NOINLINE foldWith #-}
+foldWith eat (RW r w) g z h vec@(PVector _ marr) =
+  size r vec & \(Ur !n, r) ->
+    unsafeConsumeRW (RW r w) `lseq`
+      fix
+        ( \self !i !z ->
+            if i < n
+              then withUnsafeStrictPerformIO
+                (flip MA.readArray i P.=<< MV.readMutVar marr)
+                \case
+                  Some_ !p ->
+                    eat unsafeRW p & \ !x ->
+                      self (i + 1) (g z x)
+              else h z
+        )
+        0
+        z
+
+-- | Strict indexed left-fold, to be used with @purely@ from @foldl@ package.
+ifoldWith ::
+  (forall n. Int -> RW n %1 -> p n -> a) ->
+  RW s %1 ->
+  (x -> a -> x) ->
+  x ->
+  (x -> b) ->
+  PVector p s ->
+  b
+{-# NOINLINE ifoldWith #-}
+ifoldWith eat (RW r w) g z h vec@(PVector _ marr) =
+  size r vec & \(Ur !n, r) ->
+    unsafeConsumeRW (RW r w) `lseq`
+      fix
+        ( \self !i !z ->
+            if i < n
+              then withUnsafeStrictPerformIO
+                (flip MA.readArray i P.=<< MV.readMutVar marr)
+                \case
+                  Some_ !p ->
+                    eat i unsafeRW p & \ !x ->
+                      self (i + 1) (g z x)
+              else h z
+        )
+        0
+        z
