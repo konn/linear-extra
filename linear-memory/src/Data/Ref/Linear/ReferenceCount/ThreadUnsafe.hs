@@ -154,12 +154,16 @@ modify_ f (Rc (RcBox (# strong, weak, box #))) =
 
 {- | Skimming the intermediate value of reference counted cell,
 duplicating the contents.
+
+__NOTE__: We need Dupable here, as Rc is 'Dupable' and hence there can be several copies of it.
+Under such circumstances, we need to duplicate the contents of the cell after peeking - otherwise, if @a@ contains a mutable value, it can be freed too early.
 -}
 skim :: (Representable a, Dupable a) => Rc a %1 -> (a, Rc a)
 {-# INLINE skim #-}
-skim (Rc (RcBox (# strong, weak, box #))) =
-  Box.get box & \(ura, box) ->
-    (ura, Rc (RcBox (# strong, weak, box #)))
+skim = Unsafe.toLinear \rc@(Rc (RcBox (# _, _, Box.Box _ ptr #))) ->
+  unsafeStrictPerformIO do
+    !a <- Box.reprPeek ptr
+    dup a & \(_, !a) -> P.pure (a, rc)
 
 unsafeStrictPerformIO :: IO a %1 -> a
 {-# INLINE unsafeStrictPerformIO #-}
@@ -169,12 +173,17 @@ unsafeStrictPerformIO = Unsafe.toLinear \act ->
 
 {- |
 Dereferencing the reference counted cell, decreasing strong count.
+
+__NOTE__: We need Dupable here, as Rc is 'Dupable' and hence there can be several copies of it.
+Under such circumstances, we need to duplicate the contents of the cell after peeking - otherwise, if @a@ contains a mutable value, it can be freed too early.
 -}
-deref :: (Representable a) => Rc a %1 -> a
+deref :: (Representable a, Dupable a) => Rc a %1 -> a
 {-# INLINE deref #-}
 deref = Unsafe.toLinear \rc@(Rc (RcBox (# _, _, Box.Box _ ptr #))) ->
   unsafeStrictPerformIO do
-    Box.reprPeek ptr P.<* IO.evaluate (consume rc)
+    !a <- Box.reprPeek ptr
+    dup a & \(_, !a) ->
+      a P.<$ IO.evaluate (consume rc)
 
 -- | Tries to deconstruct reference-coutned cell and deallocate heap, if there is only one 'Rc'.
 deconstruct :: (Representable a) => Rc a %1 -> Either (Rc a) a
