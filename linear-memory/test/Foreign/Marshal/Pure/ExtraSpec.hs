@@ -89,7 +89,7 @@ mapAccumLL f s0 xs =
 interpretBox :: Box Int %1 -> Instr %1 -> (Box Int, Ur (Maybe Int))
 interpretBox !ref = \case
   Modify op -> (modify_ (runOp op) ref, Ur Nothing)
-  Get -> get ref & \(Ur i, ref) -> (ref, Ur (Just i))
+  Get -> get ref & \(i, ref) -> move i & \(Ur i) -> (ref, Ur (Just i))
   Set n -> (set n ref, Ur Nothing)
 
 interpret :: Int -> [Instr] -> (Int, [Maybe Int])
