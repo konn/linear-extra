@@ -141,13 +141,13 @@ modify f (Rc (RcBox (# strong, weak, box #))) =
     (urb, Rc (RcBox (# strong, weak, box #)))
 
 -- | __Warning__: This is non-atomic!
-modify_ :: (Representable a) => (a -> a) -> Rc a %1 -> Rc a
+modify_ :: (Representable a) => (a %1 -> a) -> Rc a %1 -> Rc a
 {-# INLINE modify_ #-}
 modify_ f (Rc (RcBox (# strong, weak, box #))) =
   Box.modify_ f box & \box ->
     Rc (RcBox (# strong, weak, box #))
 
-deref :: (Representable a) => Rc a %1 -> (Ur a, Rc a)
+deref :: (Representable a, Dupable a) => Rc a %1 -> (a, Rc a)
 {-# INLINE deref #-}
 deref (Rc (RcBox (# strong, weak, box #))) =
   Box.get box & \(ura, box) ->
