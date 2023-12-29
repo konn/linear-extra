@@ -18,6 +18,7 @@ module Data.Ref.Linear.ReferenceCount.ThreadUnsafe (
   Rc (),
   alloc,
   deref,
+  skim,
   set,
   modify,
   modify_,
@@ -40,6 +41,10 @@ import qualified Data.Replicator.Linear as Rep
 import Data.Word
 import Foreign.Marshal.Pure (Box, Pool, Representable)
 import qualified Foreign.Marshal.Pure.Extra as Box
+import qualified Foreign.Marshal.Pure.Internal as Box
+import qualified GHC.Exts as GHC
+import qualified GHC.IO as GHC
+import qualified GHC.IO as IO
 import Linear.Token.Linearly
 import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear
@@ -147,11 +152,29 @@ modify_ f (Rc (RcBox (# strong, weak, box #))) =
   Box.modify_ f box & \box ->
     Rc (RcBox (# strong, weak, box #))
 
-deref :: (Representable a, Dupable a) => Rc a %1 -> (a, Rc a)
-{-# INLINE deref #-}
-deref (Rc (RcBox (# strong, weak, box #))) =
+{- | Skimming the intermediate value of reference counted cell,
+duplicating the contents.
+-}
+skim :: (Representable a, Dupable a) => Rc a %1 -> (a, Rc a)
+{-# INLINE skim #-}
+skim (Rc (RcBox (# strong, weak, box #))) =
   Box.get box & \(ura, box) ->
     (ura, Rc (RcBox (# strong, weak, box #)))
+
+unsafeStrictPerformIO :: IO a %1 -> a
+{-# INLINE unsafeStrictPerformIO #-}
+unsafeStrictPerformIO = Unsafe.toLinear \act ->
+  case GHC.runRW# $ GHC.unIO do IO.evaluate P.=<< act of
+    (# _, !a #) -> GHC.lazy a
+
+{- |
+Dereferencing the reference counted cell, decreasing strong count.
+-}
+deref :: (Representable a) => Rc a %1 -> a
+{-# INLINE deref #-}
+deref = Unsafe.toLinear \rc@(Rc (RcBox (# _, _, Box.Box _ ptr #))) ->
+  unsafeStrictPerformIO do
+    Box.reprPeek ptr P.<* IO.evaluate (consume rc)
 
 -- | Tries to deconstruct reference-coutned cell and deallocate heap, if there is only one 'Rc'.
 deconstruct :: (Representable a) => Rc a %1 -> Either (Rc a) a
