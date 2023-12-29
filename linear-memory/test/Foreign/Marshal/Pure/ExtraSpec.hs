@@ -100,11 +100,11 @@ interpret = mapAccumL go
       Get -> (i, Just i)
       Set n -> (n, Nothing)
 
-runOp :: Op %1 -> Int -> Int
+runOp :: Op %1 -> Int %1 -> Int
 runOp = \case
-  Add n -> (+ n)
-  Sub n -> subtract n
-  Mul n -> (* n)
+  Add n -> (PL.+ n)
+  Sub n -> PL.flip (PL.-) n
+  Mul n -> (PL.* n)
 
 data Op where
   Add, Sub, Mul :: !Int -> Op
