@@ -18,7 +18,7 @@ import qualified Data.Tuple.Linear as L
 import Foreign.Marshal.Pure.Extra
 import GHC.Generics (Generic)
 import Linear.Token.Linearly.TestUtils (classifyRangeBy)
-import Prelude.Linear (Ur (..), (&))
+import Prelude.Linear (Ur (..), move, (&))
 import qualified Prelude.Linear as PL
 import Test.Falsify.Generator (frequency)
 import qualified Test.Falsify.Generator as G
