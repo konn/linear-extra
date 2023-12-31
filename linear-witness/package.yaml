@@ -39,3 +39,6 @@ library:
   source-dirs: src
   dependencies:
   - vector
+  - reflection
+  - hashable
+  - ghc-magic-dict-compat
