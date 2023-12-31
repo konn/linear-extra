@@ -3302,3 +3302,8 @@ source-repository-package
   type: git
   location: https://github.com/linear-generics/linear-generics.git
   tag: e45c68d4fdf457b95bce1026a919c2f4d01e491d
+
+source-repository-package
+  type: git
+  location: https://github.com/konn/ghc-magic-dict-compat.git
+  tag: 83cf8300b145267a08679c698e64506f4b2fbd83
