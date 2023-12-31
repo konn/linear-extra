@@ -230,8 +230,13 @@ unlendMut (RW R W) (LocSource src) =
       (getLocAddr_ @s locAddr)
       src
 
+newtype RequiresDict cls r = RequiresDict ((cls) => r)
+
 withDictL :: forall cls meth r. (WithDict cls meth) => meth -> ((cls) => r) %1 -> r
-withDictL meth = Unsafe.toLinear \k -> withDict @cls @meth meth k
+withDictL meth k =
+  Unsafe.toLinear
+    (\(RequiresDict k) -> withDict @cls @meth meth k)
+    (RequiresDict @cls @r k)
 
 reifyLoc :: forall s r. LocAddr s -> ((KnownLocation s) => r) %1 -> r
 reifyLoc addr k = withDictL @(KnownLocation_ s) addr k
