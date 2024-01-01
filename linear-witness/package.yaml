@@ -37,6 +37,8 @@ ghc-options:
 
 library:
   source-dirs: src
+  other-modules:
+  - GHC.Magic.Dict.Utils
   dependencies:
   - vector
   - reflection

@@ -31,12 +31,14 @@ library
       Data.Set.Mutable.Linear.Witness
       Data.Vector.Mutable.Linear.Witness
       Linear.Token.Borrowing
+      Linear.Token.Borrowing.Owner
+      Linear.Token.Borrowing.Owner.Internal
       Linear.Token.Borrowing.Unsafe
       Linear.Token.Linearly
       Linear.Token.Linearly.Internal
       Linear.Token.Linearly.Unsafe
   other-modules:
-      Paths_linear_witness
+      GHC.Magic.Dict.Utils
   hs-source-dirs:
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints

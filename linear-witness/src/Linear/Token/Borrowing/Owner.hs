@@ -1,31 +1,44 @@
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImpredicativeTypes #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UnliftedNewtypes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -funbox-strict-fields #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# OPTIONS_GHC -fplugin GHC.Magic.Dict.Plugin #-}
 
-module Linear.Token.Borrowing (
-  Location,
-  Freeable (..),
-  R,
-  W,
-  RW (..),
-  New (..),
-  KnownLocation (..),
-  LocAddr (),
+module Linear.Token.Borrowing.Owner (
+  Owner (..),
+  SomeOwner (..),
+  newOwner,
+  Ownership (..),
+  withOwnership,
+  Owns (),
+  type (∈),
+  moveTo,
+  Moved (..),
+  tryLend,
+  tryLendMut,
+  unlend,
+  unlendMut,
+  OwnedBy (..),
 ) where
 
-import Linear.Token.Borrowing.Unsafe
+import Linear.Token.Borrowing.Owner.Internal
