@@ -33,6 +33,8 @@ library
       Linear.Token.Borrowing
       Linear.Token.Borrowing.Owner
       Linear.Token.Borrowing.Owner.Internal
+      Linear.Token.Borrowing.Owner.Typed
+      Linear.Token.Borrowing.Owner.Typed.Internal
       Linear.Token.Borrowing.Unsafe
       Linear.Token.Linearly
       Linear.Token.Linearly.Internal

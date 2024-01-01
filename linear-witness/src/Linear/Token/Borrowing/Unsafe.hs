@@ -58,7 +58,6 @@ import Data.Type.Equality
 import Data.Unique (Unique, newUnique)
 import qualified GHC.Exts as GHC
 import qualified GHC.IO as GHC
-import GHC.Magic.Dict.Compat (WithDict, withDict)
 import GHC.Magic.Dict.Utils (withDictL)
 import GHC.TypeLits
 import Linear.Token.Linearly (Linearly)
