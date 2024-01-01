@@ -94,14 +94,14 @@ lending ::
   Owner rs ws %1 ->
   ( R s %1 ->
     Owner (Delete s rs) ws %1 ->
-    (# a, Owner (Delete s rs) (Delete s ws) #)
+    (# a, Owner (Delete s rs) ws #)
   ) %1 ->
   (# a, Owner rs ws #)
 lending (Owner_ (# #)) f =
   go (f unsafeR (Owner_ (# #)))
   where
     go ::
-      (# a, Owner (Delete s rs) (Delete s ws) #) %1 ->
+      (# a, Owner (Delete s rs) ws #) %1 ->
       (# a, Owner rs ws #)
     {-# INLINE go #-}
     {- HLINT ignore "Redundant lambda" -}
