@@ -25,7 +25,10 @@
 module Linear.Token.Borrowing.Owner.Typed (
   Owner (),
   consumeOwner,
+  lseq,
   newOwner,
+  lending,
+  lendingMut,
   lend,
   lendMut,
   unlend,
@@ -45,7 +48,7 @@ import Data.Type.Equality
 import Linear.Token.Borrowing (KnownLocation (..))
 import Linear.Token.Borrowing.Owner.Typed.Internal
 import Linear.Token.Borrowing.Unsafe (LocAddr, Location)
-import Prelude.Linear
+import Prelude.Linear hiding (lseq)
 import Unsafe.Coerce (unsafeCoerce)
 
 sInsert :: LocAddr s -> SLocs ss -> SLocs (s ': ss)

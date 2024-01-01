@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImpredicativeTypes #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
@@ -33,7 +34,7 @@ import Data.Type.Equality
 import GHC.Exts
 import Linear.Token.Borrowing.Unsafe
 import Linear.Token.Linearly
-import Prelude.Linear
+import Prelude.Linear hiding (lseq)
 
 type TokenRep = 'TupleRep ('[] :: [RuntimeRep])
 
@@ -45,6 +46,14 @@ newtype Owner rs ws = Owner_ (# #)
 consumeOwner :: (rs ~ '[], ws ~ '[]) => Owner rs ws %1 -> ()
 consumeOwner (Owner_ (# #)) = ()
 
+lseq ::
+  forall a rs ws.
+  (rs ~ '[], ws ~ '[]) =>
+  Owner rs ws %1 ->
+  a %1 ->
+  a
+lseq (Owner_ (# #)) a = a
+
 newOwner :: Linearly %1 -> Owner '[] '[]
 {-# INLINE newOwner #-}
 newOwner lin = consume lin & \() -> Owner_ (# #)
@@ -55,11 +64,48 @@ lendMut ::
   (# RW s, Owner (Delete s rs) (Delete s ws) #)
 lendMut (Owner_ (# #)) = (# unsafeRW, Owner_ (# #) #)
 
+lendingMut ::
+  forall s rs ws a.
+  (Member s rs, Member s ws) =>
+  Owner rs ws %1 ->
+  ( RW s %1 ->
+    Owner (Delete s rs) (Delete s ws) %1 ->
+    (# a, Owner (Delete s rs) (Delete s ws) #)
+  ) %1 ->
+  (# a, Owner rs ws #)
+lendingMut (Owner_ (# #)) f =
+  go (f unsafeRW (Owner_ (# #)))
+  where
+    go ::
+      (# a, Owner (Delete s rs) (Delete s ws) #) %1 ->
+      (# a, Owner rs ws #)
+    {-# INLINE go #-}
+    go (# a, Owner_ (# #) #) = (# a, Owner_ (# #) #)
+
 lend ::
   (Member s rs) =>
   Owner rs ws %1 ->
   (# R s, Owner (Delete s rs) ws #)
 lend (Owner_ (# #)) = (# unsafeR, Owner_ (# #) #)
+
+lending ::
+  forall s rs ws a.
+  (Member s rs, Member s ws) =>
+  Owner rs ws %1 ->
+  ( R s %1 ->
+    Owner (Delete s rs) ws %1 ->
+    (# a, Owner (Delete s rs) (Delete s ws) #)
+  ) %1 ->
+  (# a, Owner rs ws #)
+lending (Owner_ (# #)) f =
+  go (f unsafeR (Owner_ (# #)))
+  where
+    go ::
+      (# a, Owner (Delete s rs) (Delete s ws) #) %1 ->
+      (# a, Owner rs ws #)
+    {-# INLINE go #-}
+    {- HLINT ignore "Redundant lambda" -}
+    go = \(# a, Owner_ (# #) #) -> (# a, Owner_ (# #) #)
 
 unlend ::
   (Absent s rs) =>
