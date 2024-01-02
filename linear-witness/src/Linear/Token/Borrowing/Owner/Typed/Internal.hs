@@ -14,6 +14,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UnboxedTuples #-}
@@ -35,6 +36,7 @@ import GHC.Exts
 import Linear.Token.Borrowing.Unsafe
 import Linear.Token.Linearly
 import Prelude.Linear hiding (lseq)
+import Unsafe.Coerce (unsafeCoerce)
 
 type TokenRep = 'TupleRep ('[] :: [RuntimeRep])
 
@@ -42,6 +44,18 @@ type TokenType = TYPE TokenRep
 
 type Owner :: [Location] -> [Location] -> TokenType
 newtype Owner rs ws = Owner_ (# #)
+
+deconsOwner ::
+  forall s rs ws.
+  (KnownLocation s, KnownLocations ws) =>
+  Owner (s ': rs) ws %1 ->
+  (# Either (R s) (RW s), Owner rs (Delete s ws), Ur (SLocs (Delete s ws)) #)
+deconsOwner (Owner_ (# #)) =
+  let s = locAddr @s
+      deleted = Ur (sDelete s (sLocs @ws))
+   in case sMember s (sLocs @ws) of
+        Present -> (# Right unsafeRW, Owner_ (# #), deleted #)
+        Absent -> (# Left unsafeR, Owner_ (# #), deleted #)
 
 consumeOwner :: (rs ~ '[], ws ~ '[]) => Owner rs ws %1 -> ()
 consumeOwner (Owner_ (# #)) = ()
@@ -164,3 +178,37 @@ type Delete :: forall {x}. x -> [x] -> [x]
 type family Delete x xs where
   Delete x (y ': xs) = If (x == y) xs (y ': Delete x xs)
   Delete _ '[] = '[]
+
+sInsert :: LocAddr s -> SLocs ss -> SLocs (s ': ss)
+sInsert = (:-)
+
+sDelete :: LocAddr s -> SLocs ss -> SLocs (Delete s ss)
+sDelete _ SNil = SNil
+sDelete l (r :- ls) =
+  case sEqLocAddr l r of
+    STrue -> ls
+    SFalse -> r :- sDelete l ls
+
+sMember :: LocAddr s -> SLocs ss -> Existence s ss
+sMember _ SNil = Absent
+sMember l (r :- rs) =
+  case sEqLocAddr l r of
+    STrue -> Present
+    SFalse -> case sMember l rs of
+      Present -> Present
+      Absent -> Absent
+
+type Existence :: Location -> [Location] -> Type
+data Existence l ls where
+  Present :: (Member l ls) => Existence l ls
+  Absent :: (Absent l ls) => Existence l ls
+
+type SBool :: Bool -> Type
+data SBool p where
+  SFalse :: SBool 'False
+  STrue :: SBool 'True
+
+sEqLocAddr :: LocAddr s -> LocAddr t -> SBool (s == t)
+sEqLocAddr l r = case testEquality l r of
+  Just Refl -> unsafeCoerce STrue
+  Nothing -> unsafeCoerce SFalse
