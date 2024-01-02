@@ -1,6 +1,6 @@
 # linear-memory - Missing utilities to manipulate off-heap allocated data in Linear Haskell
 
-__CAUTION__: This package is under heavy construction. Perhaps use of `unsafeDupablePeformIO` can cause inconsistency (not investigated)!
+__CAUTION__: This package is under heavy construction. Perhaps uses of `unsafeDupablePeformIO` can cause inconsistency (not investigated)!
 
 Missing mutation combinators for linear resources allocated off-heap.
 

@@ -48,6 +48,9 @@ library:
   - focus
   - stm
   - hashable
+  - derive-storable
+  - derive-storable-plugin
+
 
 tests:
   linear-memory-test:
@@ -62,6 +65,7 @@ tests:
     dependencies:
     - linear-memory
     - linear-witness-test-utils
+    - linear-parallel
     - tasty
     - tasty-hunit
     - falsify

@@ -38,7 +38,7 @@ import Data.Primitive (MutableByteArray#, PrimArray (..))
 import Data.Primitive.Types
 import GHC.Exts (Proxy#, (*#))
 import qualified GHC.Exts as GHC
-import Linear.Witness.Token
+import Linear.Token.Linearly
 import Prelude.Linear hiding (dup2, lseq, map)
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P

@@ -58,8 +58,8 @@ import Data.Primitive (Prim)
 import qualified Data.Primitive as Prim
 import qualified Data.Vector.Primitive as PV
 import GHC.Stack (HasCallStack)
-import Linear.Witness.Token
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import Linear.Token.Linearly
+import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear hiding (map, read)
 import qualified Prelude as P
 

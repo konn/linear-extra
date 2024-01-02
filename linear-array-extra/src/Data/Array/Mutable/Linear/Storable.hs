@@ -45,7 +45,7 @@ import Foreign
 import qualified GHC.Base as GHC
 import GHC.Exts (noinline)
 import GHC.Stack (HasCallStack)
-import Linear.Witness.Token
+import Linear.Token.Linearly
 import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P

@@ -13,7 +13,7 @@ module Data.HashMap.Mutable.Linear.Witness (
 import qualified Data.Array.Mutable.Linear.Witness as Array
 import Data.HashMap.Mutable.Linear
 import Data.HashMap.Mutable.Linear.Internal
-import Linear.Witness.Token
+import Linear.Token.Linearly
 import Prelude.Linear hiding (lookup)
 import Prelude hiding (lookup, mempty, seq, ($), (.))
 import qualified Prelude as P

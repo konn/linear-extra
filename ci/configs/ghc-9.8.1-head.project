@@ -7,7 +7,7 @@
 -- remote-repo: stackage-nightly-2023-11-26:http://www.stackage.org/nightly-2023-11-26
 import: ../../cabal.project
 with-compiler: ghc-9.8.1
-index-state: hackage.haskell.org 2023-11-26T05:17:02Z
+index-state: hackage.haskell.org 2023-12-31T08:12:55Z
 constraints: abstract-deque ==0.3,
              abstract-deque-tests ==0.3,
              abstract-par ==0.3.3,
@@ -1233,6 +1233,7 @@ constraints: abstract-deque ==0.3,
              ghc-lib ==9.6.3.20231121,
              ghc-lib-parser ==9.6.3.20231121,
              ghc-lib-parser-ex ==9.6.0.2,
+             ghc-magic-dict-compat ==0.0.0.0,
              ghc-parser ==0.2.6.0,
              ghc-paths ==0.1.0.12,
              ghc-prim installed,
@@ -3293,7 +3294,10 @@ constraints: abstract-deque ==0.3,
 
 allow-newer:
   falsify:base, falsify:text,
-  falsify:bytestring, falsify:optparse-applicative
+  falsify:bytestring, falsify:optparse-applicative,
+  derive-storable-plugin:ghc, 
+  derive-storable-plugin:ghci,
+  derive-storable-plugin:base
 
 source-repository-package
   type: git

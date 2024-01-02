@@ -5,5 +5,6 @@ This is just a tentative workaround until [Linear Constraints](https://github.co
 
 ## Contents
 
-- [`Linear.Witness.Token`](./src/Linear/Witness/Token.hs) provides `Linearly` constraints and related combinators.
+- [`Linear.Token.Linearly`](./src/Linear/Token/Linearly.hs) provides `Linearly` constraints and related combinators.
+- [`Linear.Token.Borrowing`](./src/Linear/Token/Borrowing.hs) provides a borrowing-related linear tokens, such as `R` and `W`.
 - [`Data.**.Linear.Witness`](./src/Data) provides allocation primitives for containers provided in `linear-base`

@@ -43,6 +43,7 @@ library
       Data.Vector.Mutable.Linear.Extra
       Data.Vector.Mutable.Linear.Generic
       Data.Vector.Mutable.Linear.Unboxed
+      Data.Vector.Mutable.Nested.Linear
   other-modules:
       Paths_linear_array_extra
   hs-source-dirs:
@@ -50,6 +51,8 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.7 && <5
+    , derive-storable
+    , derive-storable-plugin
     , ghc-prim
     , linear-base >=0.2
     , linear-generics

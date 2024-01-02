@@ -18,6 +18,7 @@ module Data.Ref.Linear.ReferenceCount.ThreadUnsafe (
   Rc (),
   alloc,
   deref,
+  skim,
   set,
   modify,
   modify_,
@@ -40,8 +41,12 @@ import qualified Data.Replicator.Linear as Rep
 import Data.Word
 import Foreign.Marshal.Pure (Box, Pool, Representable)
 import qualified Foreign.Marshal.Pure.Extra as Box
-import Linear.Witness.Token
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import qualified Foreign.Marshal.Pure.Internal as Box
+import qualified GHC.Exts as GHC
+import qualified GHC.IO as GHC
+import qualified GHC.IO as IO
+import Linear.Token.Linearly
+import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
@@ -134,24 +139,51 @@ set a (Rc (RcBox (# strong, weak, box #))) =
     Rc (RcBox (# strong, weak, box #))
 
 -- | __Warning__: This is non-atomic!
-modify :: (Representable a) => (a -> (a, b)) -> Rc a %1 -> (Ur b, Rc a)
+modify :: (Representable a) => (a %1 -> (a, Ur b)) -> Rc a %1 -> (Ur b, Rc a)
 {-# INLINE modify #-}
 modify f (Rc (RcBox (# strong, weak, box #))) =
   Box.modify f box & \(urb, box) ->
     (urb, Rc (RcBox (# strong, weak, box #)))
 
 -- | __Warning__: This is non-atomic!
-modify_ :: (Representable a) => (a -> a) -> Rc a %1 -> Rc a
+modify_ :: (Representable a) => (a %1 -> a) -> Rc a %1 -> Rc a
 {-# INLINE modify_ #-}
 modify_ f (Rc (RcBox (# strong, weak, box #))) =
   Box.modify_ f box & \box ->
     Rc (RcBox (# strong, weak, box #))
 
-deref :: (Representable a) => Rc a %1 -> (Ur a, Rc a)
+{- | Skimming the intermediate value of reference counted cell,
+duplicating the contents.
+
+__NOTE__: We need Dupable here, as Rc is 'Dupable' and hence there can be several copies of it.
+Under such circumstances, we need to duplicate the contents of the cell after peeking - otherwise, if @a@ contains a mutable value, it can be freed too early.
+-}
+skim :: (Representable a, Dupable a) => Rc a %1 -> (a, Rc a)
+{-# INLINE skim #-}
+skim = Unsafe.toLinear \rc@(Rc (RcBox (# _, _, Box.Box _ ptr #))) ->
+  unsafeStrictPerformIO do
+    !a <- Box.reprPeek ptr
+    dup a & \(_, !a) -> P.pure (a, rc)
+
+unsafeStrictPerformIO :: IO a %1 -> a
+{-# INLINE unsafeStrictPerformIO #-}
+unsafeStrictPerformIO = Unsafe.toLinear \act ->
+  case GHC.runRW# $ GHC.unIO do IO.evaluate P.=<< act of
+    (# _, !a #) -> GHC.lazy a
+
+{- |
+Dereferencing the reference counted cell, decreasing strong count.
+
+__NOTE__: We need Dupable here, as Rc is 'Dupable' and hence there can be several copies of it.
+Under such circumstances, we need to duplicate the contents of the cell after peeking - otherwise, if @a@ contains a mutable value, it can be freed too early.
+-}
+deref :: (Representable a, Dupable a) => Rc a %1 -> a
 {-# INLINE deref #-}
-deref (Rc (RcBox (# strong, weak, box #))) =
-  Box.get box & \(ura, box) ->
-    (ura, Rc (RcBox (# strong, weak, box #)))
+deref = Unsafe.toLinear \rc@(Rc (RcBox (# _, _, Box.Box _ ptr #))) ->
+  unsafeStrictPerformIO do
+    !a <- Box.reprPeek ptr
+    dup a & \(_, !a) ->
+      a P.<$ IO.evaluate (consume rc)
 
 -- | Tries to deconstruct reference-coutned cell and deallocate heap, if there is only one 'Rc'.
 deconstruct :: (Representable a) => Rc a %1 -> Either (Rc a) a

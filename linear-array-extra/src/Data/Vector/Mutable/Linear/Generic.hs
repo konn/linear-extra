@@ -48,8 +48,8 @@ import qualified Data.Array.Mutable.Linear.Class as Array
 import qualified Data.Bifunctor.Linear as BiL
 import qualified Data.Unrestricted.Linear as Ur
 import GHC.Stack (HasCallStack)
-import Linear.Witness.Token
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import Linear.Token.Linearly
+import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear hiding (filter, mapMaybe)
 import qualified Prelude as P
 

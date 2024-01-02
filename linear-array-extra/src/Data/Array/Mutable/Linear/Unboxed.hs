@@ -46,7 +46,7 @@ import GHC.Exts (runRW#)
 import qualified GHC.Exts as GHC
 import GHC.IO (unIO)
 import GHC.Stack (HasCallStack)
-import Linear.Witness.Token
+import Linear.Token.Linearly
 import Prelude.Linear hiding (map)
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P

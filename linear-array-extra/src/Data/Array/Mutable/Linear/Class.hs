@@ -16,8 +16,8 @@ module Data.Array.Mutable.Linear.Class (
 ) where
 
 import qualified Data.Array.Mutable.Linear.Extra as LB
-import Linear.Witness.Token
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import Linear.Token.Linearly
+import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear
 import qualified Prelude as P
 

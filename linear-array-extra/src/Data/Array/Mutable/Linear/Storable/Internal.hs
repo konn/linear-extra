@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -16,6 +17,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -funbox-strict-fields #-}
+{-# OPTIONS_GHC -fplugin Foreign.Storable.Generic.Plugin #-}
+{-# OPTIONS_GHC -fplugin-opt=Foreign.Storable.Generic.Plugin:-v0 #-}
 
 module Data.Array.Mutable.Linear.Storable.Internal (
   SArray (..),
@@ -34,11 +37,13 @@ module Data.Array.Mutable.Linear.Storable.Internal (
 import qualified Data.Array.Mutable.Linear.Class as C
 import Data.Function (fix)
 import Foreign
-import Foreign.Marshal.Pure (MkRepresentable (..), Representable (..))
+import Foreign.Marshal.Pure (KnownRepresentable, MkRepresentable (..), Representable (..))
+import Foreign.Storable.Generic (GStorable)
 import GHC.Base (runRW#, unIO)
+import GHC.Generics (Generic)
 import GHC.IO (noDuplicate)
-import Linear.Witness.Token (Linearly, linearly)
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import Linear.Token.Linearly (Linearly, linearly)
+import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
@@ -46,7 +51,8 @@ import qualified Prelude as P
 -- TODO: consider Pool-based variant?
 data SArray a where
   SArray :: {-# UNPACK #-} !Int -> {-# UNPACK #-} !(Ptr a) %1 -> SArray a
-  deriving anyclass (HasLinearWitness)
+  deriving (Generic)
+  deriving anyclass (HasLinearWitness, KnownRepresentable, GStorable)
 
 instance Representable (SArray a) where
   type AsKnown (SArray a) = AsKnown (Int, Ptr a)

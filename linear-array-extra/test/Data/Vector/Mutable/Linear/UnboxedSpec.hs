@@ -29,7 +29,7 @@ import qualified Data.Unrestricted.Linear as Ur
 import qualified Data.Vector.Mutable.Linear.Unboxed as LUV
 import qualified Data.Vector.Unboxed as U
 import Linear.Array.Extra.TestUtils
-import Linear.Witness.Token (linearly)
+import Linear.Token.Linearly (linearly)
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F
 import Test.Falsify.Predicate ((.$))

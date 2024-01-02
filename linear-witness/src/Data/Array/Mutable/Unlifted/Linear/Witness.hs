@@ -14,7 +14,7 @@ module Data.Array.Mutable.Unlifted.Linear.Witness (
 import Data.Array.Mutable.Unlifted.Linear
 import GHC.Exts (unsafeCoerce#)
 import qualified GHC.Exts as GHC
-import Linear.Witness.Token
+import Linear.Token.Linearly
 import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P

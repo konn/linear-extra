@@ -18,7 +18,7 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
-module Linear.Witness.Token.Unsafe (HasLinearWitness, linearWitness, linearWitness#) where
+module Linear.Token.Linearly.Unsafe (HasLinearWitness, linearWitness, linearWitness#) where
 
 import qualified Data.Array.Destination as DA
 import qualified Data.Array.Mutable.Linear as MA
@@ -35,7 +35,7 @@ import qualified Data.Vector.Mutable.Linear as MV
 import Foreign.Marshal.Pure
 import GHC.Exts
 import GHC.TypeLits
-import Linear.Witness.Token.Internal
+import Linear.Token.Linearly.Internal
 import Prelude.Linear.Unsatisfiable (Unsatisfiable)
 import qualified Streaming.Linear as S
 import qualified System.IO.Linear as L

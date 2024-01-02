@@ -38,6 +38,8 @@ library
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , derive-storable
+    , derive-storable-plugin
     , focus
     , hashable
     , linear-array-extra
@@ -52,6 +54,7 @@ test-suite linear-memory-test
   main-is: Spec.hs
   other-modules:
       Data.AtomicCounter.LinearSpec
+      Foreign.Marshal.Pure.ExtraSpec
       Paths_linear_memory
   hs-source-dirs:
       test
@@ -65,6 +68,7 @@ test-suite linear-memory-test
     , linear-array-extra
     , linear-base
     , linear-memory
+    , linear-parallel
     , linear-witness
     , linear-witness-test-utils
     , tasty

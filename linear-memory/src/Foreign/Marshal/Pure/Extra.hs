@@ -27,6 +27,7 @@ import Foreign.Marshal.Pure
 import Foreign.Marshal.Pure.Internal
 import GHC.Exts (runRW#)
 import GHC.IO (unIO, unsafeDupablePerformIO)
+import GHC.IO.Unsafe (noDuplicate, unsafePerformIO)
 import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
@@ -101,29 +102,34 @@ instance Representable Float where
   toKnown = id
   ofKnown = id
 
-get :: Representable a => Box a %1 -> (Ur a, Box a)
+get :: (Representable a, Dupable a) => Box a %1 -> (a, Box a)
 {-# NOINLINE get #-}
 get = Unsafe.toLinear \box@(Box _ b) ->
   case runRW# (unIO (reprPeek b)) of
-    (# _, a #) -> (Ur a, box)
+    (# _, !a #) ->
+      dup a & \(a, _) -> (a, box)
 
 -- | __Warning__: non-atomic
-modify :: Representable a => (a -> (a, b)) -> Box a %1 -> (Ur b, Box a)
-{-# INLINE modify #-}
-modify f b =
-  get b & \(Ur a, box) ->
-    (a `seq` f a) & \(!a, !b) -> (Ur b, set a box)
+modify :: (Representable a) => (a %1 -> (a, Ur b)) -> Box a %1 -> (Ur b, Box a)
+{-# NOINLINE modify #-}
+modify = Unsafe.toLinear2 \f box@(Box _ ptr) -> unsafePerformIO do
+  !a <- reprPeek ptr
+  f a & \(!a, !urb) -> do
+    reprPoke ptr a
+    P.pure (urb, box)
 
 -- | __Warning__: non-atomic
-modify_ :: Representable a => (a -> a) -> Box a %1 -> Box a
-modify_ f b =
-  get b & \(Ur a, box) ->
-    set (a `seq` f a) box
+modify_ :: (Representable a) => (a %1 -> a) -> Box a %1 -> Box a
+modify_ = Unsafe.toLinear2 \f box@(Box _ ptr) -> unsafePerformIO do
+  !a <- reprPeek ptr
+  f a & \ !a -> do
+    () <- reprPoke ptr a
+    P.pure box
 
-set :: Representable a => a -> Box a %1 -> Box a
+set :: (Representable a) => a -> Box a %1 -> Box a
 {-# NOINLINE set #-}
 set !a = Unsafe.toLinear \(Box poolPtr ptr) ->
-  case runRW# (unIO (reprPoke ptr a)) of
+  case runRW# (unIO (noDuplicate P.>> reprPoke ptr a)) of
     (# _, () #) -> Box poolPtr ptr
 
 release :: Box a %1 -> ()

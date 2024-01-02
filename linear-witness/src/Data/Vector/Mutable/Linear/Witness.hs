@@ -13,7 +13,7 @@ module Data.Vector.Mutable.Linear.Witness (
 import qualified Data.Array.Mutable.Linear.Witness as Array
 import Data.Vector.Mutable.Linear
 import Data.Vector.Mutable.Linear.Internal
-import Linear.Witness.Token
+import Linear.Token.Linearly
 import Prelude.Linear
 
 emptyL :: Linearly %1 -> Vector a

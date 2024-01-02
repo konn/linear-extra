@@ -42,6 +42,8 @@ library:
   source-dirs: src
   dependencies:
   - ghc-prim
+  - derive-storable
+  - derive-storable-plugin
 
 executables:
   linear-array-extra-exe:
