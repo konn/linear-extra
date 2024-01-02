@@ -36,6 +36,8 @@ module Linear.Token.Borrowing.Owner.Internal (
   type (∈),
   moveTo,
   Moved (..),
+  tryLending,
+  tryLendingMut,
   tryLend,
   tryLendMut,
   unlend,
@@ -49,6 +51,7 @@ import qualified Data.Bifunctor.Linear as BiL
 import qualified Data.HashMap.Mutable.Linear as LHM
 import qualified Data.HashMap.Mutable.Linear.Witness as LHM
 import Data.Kind (Constraint, Type)
+import qualified Data.Maybe as P
 import Data.Proxy (Proxy (..))
 import GHC.Magic.Dict.Utils (withDictL)
 import Linear.Token.Borrowing.Unsafe
@@ -98,6 +101,25 @@ tryLendMut (Owner src) =
       (getLocAddr_ @s locAddr)
       src
 
+tryLendingMut ::
+  forall s n r.
+  (s ∈ n) =>
+  Owner n %1 ->
+  (Maybe (RW s) %1 -> Owner n %1 -> (r, RW s, Owner n)) %1 ->
+  (r, Owner n)
+tryLendingMut (Owner src) k =
+  LHM.alterF
+    ( \case
+        s@(Just ReadWrite) -> (Just unsafeRW, Ur s, Ur (Just LendWrite))
+        m -> (Nothing, Ur m, Ur m)
+    )
+    (getLocAddr_ @s locAddr)
+    src
+    & \(mrw, Ur old, src) ->
+      k mrw (Owner src) & \(ans, rw, Owner src) ->
+        P.maybe id (LHM.insert (getLocAddr_ @s locAddr)) old src & \src ->
+          unsafeConsumeRW rw `lseq` (ans, Owner src)
+
 tryLend :: forall s n. (s ∈ n) => Owner n %1 -> (Maybe (R s), Owner s)
 tryLend (Owner src) =
   BiL.second Owner $
@@ -108,6 +130,25 @@ tryLend (Owner src) =
       )
       (getLocAddr_ @s locAddr)
       src
+
+tryLending ::
+  forall s n r.
+  (s ∈ n) =>
+  Owner n %1 ->
+  (Maybe (R s) %1 -> Owner n %1 -> (r, R s, Owner n)) %1 ->
+  (r, Owner n)
+tryLending (Owner src) k =
+  LHM.alterF
+    ( \case
+        s@(Just ReadWrite) -> (Just unsafeR, Ur s, Ur (Just LendRead))
+        m -> (Nothing, Ur m, Ur m)
+    )
+    (getLocAddr_ @s locAddr)
+    src
+    & \(mr, Ur old, src) ->
+      k mr (Owner src) & \(ans, r, Owner src) ->
+        P.maybe id (LHM.insert (getLocAddr_ @s locAddr)) old src & \src ->
+          unsafeConsumeR r `lseq` (ans, Owner src)
 
 unlend :: forall s n. (s ∈ n) => R s %1 -> Owner n %1 -> Owner n
 unlend R (Owner src) =

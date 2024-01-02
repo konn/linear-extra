@@ -30,6 +30,8 @@ module Linear.Token.Borrowing.Owner (
   type (∈),
   moveTo,
   Moved (..),
+  tryLending,
+  tryLendingMut,
   tryLend,
   tryLendMut,
   unlend,
