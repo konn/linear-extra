@@ -2861,4 +2861,4 @@ constraints: abstract-deque ==0.3,
 allow-newer:
   falsify:base, falsify:text,
   falsify:bytestring, falsify:optparse-applicative,
-  derive-storable-plugin:ghci
+  derive-storable-plugin:ghci, derive-storable-plugin:ghc
