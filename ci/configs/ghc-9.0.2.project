@@ -7,7 +7,7 @@
 -- remote-repo: stackage-lts-19.0:http://www.stackage.org/lts-19.0
 import: ../../cabal.project
 with-compiler: ghc-9.0.2
-index-state: hackage.haskell.org 2023-08-24T00:43:23Z
+index-state: hackage.haskell.org 2023-12-31T08:12:55Z
 constraints: abstract-deque ==0.3,
              abstract-deque-tests ==0.3,
              abstract-par ==0.3.3,
@@ -896,6 +896,7 @@ constraints: abstract-deque ==0.3,
              ghc-lib ==9.0.2.20211226,
              ghc-lib-parser ==9.0.2.20211226,
              ghc-lib-parser-ex ==9.0.0.6,
+             ghc-magic-dict-compat ==0.0.0.0,
              ghc-parser ==0.2.3.0,
              ghc-paths ==0.1.0.12,
              ghc-prim installed,

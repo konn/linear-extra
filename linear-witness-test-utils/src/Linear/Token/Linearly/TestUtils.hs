@@ -14,7 +14,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Linear.Witness.Token.TestUtils (
+module Linear.Token.Linearly.TestUtils (
   classifyRangeBy,
   fst',
   snd',
@@ -49,7 +49,7 @@ import qualified Data.Vector.Mutable.Linear as LV
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 import GHC.Generics (Generic)
-import Linear.Witness.Token (Linearly, besides, linearly)
+import Linear.Token.Linearly (Linearly, besides, linearly)
 import Prelude.Linear (Ur (..), unur)
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F

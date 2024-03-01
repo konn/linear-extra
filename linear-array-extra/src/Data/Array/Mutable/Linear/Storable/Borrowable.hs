@@ -39,7 +39,8 @@ module Data.Array.Mutable.Linear.Storable.Borrowable (
   R,
   W,
   RW (..),
-  NewArray (..),
+  NewArray,
+  New (..),
   size,
   get,
   unsafeGet,
@@ -57,7 +58,6 @@ module Data.Array.Mutable.Linear.Storable.Borrowable (
 
 import Control.Monad (unless)
 import Data.Function (fix)
-import Data.Kind (Type)
 import qualified Data.Vector.Storable as SV
 import Foreign (finalizerFree)
 import qualified Foreign as F
@@ -65,59 +65,23 @@ import Foreign.ForeignPtr
 import Foreign.Marshal.Array
 import Foreign.Ptr (Ptr)
 import Foreign.Storable (Storable, peekElemOff, pokeElemOff)
+import GHC.Exts (TYPE)
 import qualified GHC.Exts as GHC
 import qualified GHC.IO as GHC
 import qualified GHC.IO as IO
 import GHC.Stack (HasCallStack)
-import GHC.TypeLits
-import Linear.Witness.Token
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import Linear.Token.Borrowing
+import Linear.Token.Borrowing.Unsafe
+import Linear.Token.Linearly
 import Prelude.Linear
-import Prelude.Linear.Unsatisfiable (Unsatisfiable, unsatisfiable)
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P
 
-{- HLINT ignore MkNewArray "Redundant bracket" -}
-type NewArray :: Type -> Type
-data NewArray a where
-  MkNewArray :: SArray a s -> RW s %1 -> NewArray a
+{- HLINT ignore MkNew "Redundant bracket" -}
+type NewArray a = New (SArray a)
 
 data SArray a s where
   SArray :: {-# UNPACK #-} !Int -> {-# UNPACK #-} !(Ptr a) -> SArray a s
-
-type ZeroBitType = GHC.TYPE ('GHC.TupleRep '[])
-
-type R :: forall {s}. s -> Type
-data R s = R deriving anyclass (HasLinearWitness)
-
-instance
-  (Unsatisfiable ('ShowType (R s) ':<>: 'Text " is not Consumable by design")) =>
-  Consumable (R s)
-  where
-  consume = unsatisfiable
-  {-# INLINE consume #-}
-
-type W :: forall {s}. s -> Type
-data W s = W deriving anyclass (HasLinearWitness)
-
-instance
-  (Unsatisfiable ('ShowType (W s) ':<>: 'Text " is not Consumable by design")) =>
-  Consumable (W s)
-  where
-  consume = unsatisfiable
-  {-# INLINE consume #-}
-
-type RW :: forall {s}. s -> Type
-data RW s where
-  RW :: !(R s) %1 -> !(W s) %1 -> RW s
-  deriving anyclass (HasLinearWitness)
-
-instance
-  (Unsatisfiable ('ShowType (RW s) ':<>: 'Text " is not Consumable by design")) =>
-  Consumable (RW s)
-  where
-  consume = unsatisfiable
-  {-# INLINE consume #-}
 
 unsafeAllocL ::
   (SV.Storable a) =>
@@ -126,8 +90,8 @@ unsafeAllocL ::
   NewArray a
 {-# NOINLINE unsafeAllocL #-}
 unsafeAllocL n l =
-  l `lseq` withUnsafeStrictPerformIO (mallocArray n) \ptr ->
-    SArray n ptr `MkNewArray` RW R W
+  withUnsafeStrictPerformIO (mallocArray n) \ptr ->
+    unsafeMkNew (SArray n ptr) l
 
 allocL ::
   (HasCallStack, SV.Storable a) =>
@@ -139,29 +103,28 @@ allocL ::
 allocL n a l
   | n < 0 = l `lseq` error ("allocL: negative length: " <> show n)
   | otherwise =
-      l `lseq` withUnsafeStrictPerformIO (mallocArray n) \ptr ->
+      withUnsafeStrictPerformIO (mallocArray n) \ptr ->
         fix
           ( \self !i ->
               unless (i == n) $
                 pokeElemOff ptr i a P.>> self (i + 1)
           )
           0
-          `withUnsafeStrictPerformIO_` (SArray n ptr `MkNewArray` RW R W)
+          `withUnsafeStrictPerformIO_` unsafeMkNew (SArray n ptr) l
 
 fromListL :: (Storable a) => [a] -> Linearly %1 -> NewArray a
 {-# NOINLINE fromListL #-}
 fromListL (xs :: [a]) l =
-  l `lseq`
-    let len = P.length xs
-     in withUnsafeStrictPerformIO (newArray xs) $ \ptr ->
-          SArray len ptr `MkNewArray` RW R W
+  let len = P.length xs
+   in withUnsafeStrictPerformIO (newArray xs) $ \ptr ->
+        unsafeMkNew (SArray len ptr) l
 
 fromVectorL :: (Storable a) => SV.Vector a -> Linearly %1 -> NewArray a
 {-# NOINLINE fromVectorL #-}
 fromVectorL xs l =
-  unsafeAllocL (SV.length xs) l & \(SArray sz ptr `MkNewArray` RW R W) ->
+  unsafeAllocL (SV.length xs) l & \(SArray sz ptr `MkNew` RW r w) ->
     SV.unsafeWith xs (\src -> copyArray ptr src sz)
-      `withUnsafeStrictPerformIO_` (SArray sz ptr `MkNewArray` RW R W)
+      `withUnsafeStrictPerformIO_` (SArray sz ptr `MkNew` RW r w)
 
 withUnsafeStrictPerformIO_ :: IO () -> a %1 -> a
 {-# INLINE withUnsafeStrictPerformIO_ #-}
@@ -183,13 +146,18 @@ withUnsafeStrictPerformIO = Unsafe.toLinear2 \act f ->
 
 freeze :: forall a s. (SV.Storable a) => RW s %1 -> SArray a s -> Ur (SV.Vector a)
 {-# NOINLINE freeze #-}
-freeze = GHC.noinline $ \(RW R W) (SArray l ptr) ->
+freeze = GHC.noinline $ \rw (SArray l ptr) ->
   newForeignPtr finalizerFree ptr
-    `withUnsafeStrictPerformIO` \fptr -> Ur (SV.unsafeFromForeignPtr0 fptr l)
+    `withUnsafeStrictPerformIO` \fptr ->
+      unsafeConsumeRW rw `lseq` Ur (SV.unsafeFromForeignPtr0 fptr l)
 
-free :: RW s %1 -> SArray a s -> ()
-{-# NOINLINE free #-}
-free (RW R W) (SArray _ mu) = unsafeStrictPerformIO (F.free mu)
+instance Freeable (SArray a) where
+  free = freeSA
+  {-# INLINE free #-}
+
+freeSA :: RW s %1 -> SArray a s -> ()
+{-# NOINLINE freeSA #-}
+freeSA rw (SArray _ mu) = unsafeConsumeRW rw `lseq` unsafeStrictPerformIO (F.free mu)
 
 size :: R s %1 -> SArray a s -> (Ur Int, R s)
 {-# NOINLINE size #-}
@@ -219,6 +187,8 @@ unsafeSet :: (SV.Storable a) => RW s %1 -> Int -> a -> SArray a s -> RW s
 unsafeSet (RW r w) !i !a (SArray _ !ptr) =
   do { GHC.noDuplicate; pokeElemOff ptr i a } `withUnsafeStrictPerformIO_` RW r w
 
+type ZeroBitType = TYPE ('GHC.TupleRep '[])
+
 type SlicesTo :: forall {s}. s -> s -> s -> ZeroBitType
 newtype SlicesTo s l r = SlicesTo_ GHC.Void#
 
@@ -236,14 +206,15 @@ data Slice a s where
 
 unsafeSplit :: (SV.Storable a) => RW s %1 -> Int -> SArray a s -> Slice a s
 {-# NOINLINE unsafeSplit #-}
-unsafeSplit = GHC.noinline \(RW R W) lenL (SArray len v) ->
-  let !lenR = len - lenL
-   in MkSlice
-        SlicesTo
-        (RW R W)
-        (RW R W)
-        (SArray lenL v)
-        (SArray lenR (v `advancePtr` lenL))
+unsafeSplit = GHC.noinline \rw lenL (SArray len v) ->
+  unsafeConsumeRW rw `lseq`
+    let !lenR = len - lenL
+     in MkSlice
+          SlicesTo
+          unsafeRW
+          unsafeRW
+          (SArray lenL v)
+          (SArray lenR (v `advancePtr` lenL))
 
 split :: (SV.Storable a, HasCallStack) => RW s %1 -> Int -> SArray a s -> Slice a s
 {-# INLINE split #-}
@@ -262,11 +233,13 @@ combine ::
 {-# NOINLINE combine #-}
 combine
   SlicesTo_ {}
-  !rw
-  (RW R W)
+  rwL
+  rwR
   (SArray lenL v)
   (SArray lenR _) =
-    (Ur (SArray (lenL + lenR) v), Unsafe.coerce rw)
+    unsafeConsumeRW rwL `lseq`
+      unsafeConsumeRW rwR `lseq`
+        (Ur (SArray (lenL + lenR) v), unsafeRW)
 
 halve :: (SV.Storable a) => RW s %1 -> SArray a s -> Slice a s
 {-# INLINE halve #-}

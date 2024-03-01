@@ -13,8 +13,8 @@ import qualified Data.Array.Mutable.Linear.Witness as LA
 import Data.Unrestricted.Linear (unur)
 import qualified Data.Unrestricted.Linear as Ur
 import qualified Data.Vector as V
-import Linear.Witness.Token (linearly)
-import Linear.Witness.Token.TestUtils
+import Linear.Token.Linearly (linearly)
+import Linear.Token.Linearly.TestUtils
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F
 import Test.Falsify.Predicate ((.$))

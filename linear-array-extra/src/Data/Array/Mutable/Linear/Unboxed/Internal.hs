@@ -35,8 +35,8 @@ import GHC.Base (runRW#, unIO)
 import GHC.Exts (RealWorld)
 import qualified GHC.Exts as GHC
 import GHC.IO (noDuplicate)
-import Linear.Witness.Token (Linearly)
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import Linear.Token.Linearly (Linearly)
+import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P

@@ -14,7 +14,7 @@ import Data.Array.Mutable.Linear
 import Data.Array.Mutable.Linear.Internal
 import qualified Data.Array.Mutable.Unlifted.Linear.Witness as Unlifted
 import GHC.Stack (HasCallStack)
-import Linear.Witness.Token
+import Linear.Token.Linearly
 import Prelude.Linear
 import qualified Prelude as P
 

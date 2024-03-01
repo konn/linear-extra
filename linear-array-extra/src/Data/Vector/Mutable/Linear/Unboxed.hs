@@ -86,8 +86,8 @@ import qualified Data.Vector.Unboxed.Mutable as MU
 import GHC.Exts (runRW#)
 import GHC.IO (unIO)
 import GHC.Stack (HasCallStack)
-import Linear.Witness.Token
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import Linear.Token.Linearly
+import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear hiding (filter, map, mapMaybe)
 import qualified Unsafe.Linear as Unsafe
 import qualified Prelude as P

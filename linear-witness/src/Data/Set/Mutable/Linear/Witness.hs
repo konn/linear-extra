@@ -14,7 +14,7 @@ module Data.Set.Mutable.Linear.Witness (
 import qualified Data.HashMap.Mutable.Linear.Witness as LHM
 import Data.Set.Mutable.Linear
 import Data.Set.Mutable.Linear.Internal
-import Linear.Witness.Token
+import Linear.Token.Linearly
 import Prelude.Linear hiding (lookup)
 import qualified Prelude.Linear as P
 import Prelude hiding (lookup, mempty, seq, ($), (.))
