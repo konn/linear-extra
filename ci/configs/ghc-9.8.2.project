@@ -2857,3 +2857,8 @@ constraints: abstract-deque ==0.3,
              zlib ==0.6.3.0,
              zlib-bindings ==0.1.1.5,
              zstd ==0.1.3.0
+
+allow-newer:
+  falsify:base, falsify:text,
+  falsify:bytestring, falsify:optparse-applicative,
+  derive-storable-plugin:ghci
