@@ -223,6 +223,10 @@ split !rw l arr@(SArray n _) =
     then unsafeSplit rw l arr
     else error ("split: Index out of bounds: " <> show (l, n)) rw
 
+lseqVoid# :: GHC.Void# %1 -> b %1 -> b
+{-# INLINE lseqVoid# #-}
+lseqVoid# = Unsafe.toLinear \_ b -> b
+
 combine ::
   SlicesTo s l r %1 ->
   RW l %1 ->
@@ -232,11 +236,12 @@ combine ::
   (Ur (SArray a s), RW s)
 {-# NOINLINE combine #-}
 combine
-  SlicesTo_ {}
+  (SlicesTo_ v#)
   rwL
   rwR
   (SArray lenL v)
   (SArray lenR _) =
+    v# `lseqVoid#`
     unsafeConsumeRW rwL `lseq`
       unsafeConsumeRW rwR `lseq`
         (Ur (SArray (lenL + lenR) v), unsafeRW)

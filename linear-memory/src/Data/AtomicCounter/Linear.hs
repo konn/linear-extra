@@ -7,6 +7,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LinearTypes #-}
+{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -20,6 +21,7 @@
 
 module Data.AtomicCounter.Linear (
   Counter,
+  newCounter,
   withCounter,
   withCounterCapacity,
   getCount,
@@ -38,11 +40,13 @@ import Foreign (free, peek, poke)
 import qualified Foreign
 import Foreign.Atomic.Internal
 import Foreign.Marshal.Array
-import Foreign.Marshal.Pure (MkRepresentable (..), Representable (..))
+import Foreign.Marshal.Pure (MkRepresentable (..), Pool, Representable (..))
 import Foreign.Storable.Generic (GStorable)
 import GHC.Exts
+import qualified GHC.Exts as GHC
 import GHC.Generics (Generic)
 import GHC.IO (uninterruptibleMask_, unsafeDupablePerformIO)
+import qualified GHC.IO as IO
 import Prelude.Linear
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Unsafe.Linear as Unsafe
@@ -51,12 +55,12 @@ import qualified Prelude as P
 -- | Thread-safe atomic counter.
 data Counter
   = Counter
-      {-# UNPACK #-} !(Ptr Word)
-      -- ^ Counter body.
+      -- | Counter body.
       --  Memory layout: | number of duplicated counters | count |
-      {-# UNPACK #-} !(Ptr Bool)
-      -- ^ Set to @1@ if already released.
+      {-# UNPACK #-} !(Ptr Word)
+      -- | Set to @1@ if already released.
       -- Used in 'withCounterCapacity' to ensure exception resilience.
+      {-# UNPACK #-} !(Ptr Bool)
   deriving (Generic)
   deriving anyclass (GStorable)
 
@@ -84,6 +88,36 @@ instance Dupable Counter where
     unsafePerformIO do
       (c, c) P.<$ fetchAddWordOffset ptr 0 1
   {-# NOINLINE dup2 #-}
+
+withUnsafeStrictPerformIO_ :: IO () -> a %1 -> a
+{-# INLINE withUnsafeStrictPerformIO_ #-}
+withUnsafeStrictPerformIO_ act = Unsafe.toLinear \x ->
+  case GHC.runRW# (IO.unIO (do do () <- act; P.pure x)) of
+    (# _, !a #) -> GHC.lazy a
+
+unsafeStrictPerformIO :: IO a %1 -> a
+{-# INLINE unsafeStrictPerformIO #-}
+unsafeStrictPerformIO = Unsafe.toLinear \act ->
+  case GHC.runRW# (IO.unIO do IO.evaluate P.=<< act) of
+    (# _, !a #) -> GHC.lazy a
+
+withUnsafeStrictPerformIO :: IO a %1 -> (a -> b) %1 -> b
+{-# INLINE withUnsafeStrictPerformIO #-}
+withUnsafeStrictPerformIO = Unsafe.toLinear2 \act f ->
+  case GHC.runRW# (IO.unIO do !a <- act; IO.evaluate (f a)) of
+    (# _, b #) -> GHC.lazy b
+
+newCounter :: Pool %1 -> Counter
+{-# INLINE newCounter #-}
+newCounter = Unsafe.toLinear \pool ->
+  unsafeStrictPerformIO do
+    ptr <- newArray [1, 0]
+    releasedP <- Foreign.new False
+    evaluate (Counter ptr releasedP) `finally` do
+      released <- peek releasedP
+      P.unless released $ do
+        free ptr
+        free releasedP
 
 withCounter :: (Counter %1 -> Ur a) %1 -> Ur a
 {-# INLINE withCounter #-}
@@ -127,8 +161,9 @@ increment' = Unsafe.toLinear \c@(Counter ptr _) ->
 increment_ :: Counter %1 -> Counter
 {-# NOINLINE increment_ #-}
 increment_ = Unsafe.toLinear \c@(Counter ptr _) ->
-  unsafePerformIO $
-    c P.<$ fetchAddWordOffset ptr 1 1
+  unsafePerformIO
+    $ c
+    P.<$ fetchAddWordOffset ptr 1 1
 
 -- | Decrements a counter atomically, and returns the /old/ value.
 decrement :: Counter %1 -> (Ur Word, Counter)
@@ -150,5 +185,6 @@ decrement' = Unsafe.toLinear \c@(Counter ptr _) ->
 decrement_ :: Counter %1 -> Counter
 {-# NOINLINE decrement_ #-}
 decrement_ = Unsafe.toLinear \c@(Counter ptr _) ->
-  unsafePerformIO $
-    c P.<$ fetchSubWordOffset ptr 1 1
+  unsafePerformIO
+    $ c
+    P.<$ fetchSubWordOffset ptr 1 1

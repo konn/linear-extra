@@ -60,8 +60,8 @@ fftRaw (RW r w) array =
   SA.size r array & \(Ur len, r) ->
     if popCount len /= 1
       then
-        SA.free (RW r w) array `lseq`
-          error ("Array length must be of power of two, but got: " <> show len)
+        SA.free (RW r w) array
+          `lseq` error ("Array length must be of power of two, but got: " <> show len)
       else
         let theta = 2 * pi / fromIntegral len
          in reverseBit (RW r w) array & \rw ->
@@ -102,8 +102,8 @@ fftRawPar (RW r w) (max 0 -> thresh) array =
   SA.size r array & \(Ur len, r) ->
     if popCount len /= 1
       then
-        SA.free (RW r w) array `lseq`
-          error ("Array length must be of power of two, but got: " <> show len)
+        SA.free (RW r w) array
+          `lseq` error ("Array length must be of power of two, but got: " <> show len)
       else
         let theta = 2 * pi / fromIntegral len
          in reverseBit (RW r w) array & \rw ->
@@ -113,28 +113,29 @@ fftRawPar (RW r w) (max 0 -> thresh) array =
     loop rw arr !n !c !s
       | n <= 1 = rw
       | otherwise =
-          SA.halve rw arr & \(SA.MkSlice sliced rwL rwR l r) ->
-            let !half = n `quot` 2
-                !dblCs = 2 * c * c - 1
-                !dblSn = 2 * s * c
-                !kW = c :+ s
-                divide
-                  | n <= thresh = (,)
-                  | otherwise = par
-             in divide
-                  (loop rwL l half dblCs dblSn)
-                  (loop rwR r half dblCs dblSn)
-                  & \(rwL, rwR) ->
-                    SA.combine sliced rwL rwR l r & \(Ur arr, rw) ->
-                      forN
-                        half
-                        ( \ !k (RW r w) ->
-                            SA.unsafeGet r k arr & \(Ur ek, r) ->
-                              SA.unsafeGet r (half + k) arr & \(Ur ok, r) ->
-                                SA.unsafeSet (RW r w) k (ek + kW ^ k * ok) arr & \rw ->
-                                  SA.unsafeSet rw (half + k) (ek + kW ^ (half + k) * ok) arr
-                        )
-                        rw
+          case SA.halve rw arr of
+            (SA.MkSlice sliced rwL rwR l r) ->
+              let !half = n `quot` 2
+                  !dblCs = 2 * c * c - 1
+                  !dblSn = 2 * s * c
+                  !kW = c :+ s
+                  divide
+                    | n <= thresh = (,)
+                    | otherwise = par
+                  !(rwL', rwR') =
+                    divide
+                      (loop rwL l half dblCs dblSn)
+                      (loop rwR r half dblCs dblSn)
+                  !(Ur arr, rw') = SA.combine sliced rwL' rwR' l r
+               in forN
+                    half
+                    ( \ !k (RW r w) ->
+                        let !(Ur ek, r') = SA.unsafeGet r k arr
+                            !(Ur ok, r'') = SA.unsafeGet r' (half + k) arr
+                            !rw = SA.unsafeSet (RW r'' w) k (ek + kW ^ k * ok) arr
+                         in SA.unsafeSet rw (half + k) (ek + kW ^ (half + k) * ok) arr
+                    )
+                    rw'
 
 forN :: Int -> (Int -> a %p -> a) -> a %p -> a
 {-# INLINE forN #-}
@@ -189,8 +190,8 @@ reverseBit (RW r w) v =
               else
                 let !k = bit $ pk - 1
                     !l = bit pl
-                 in loop (pk - 1) (pl + 1) $
-                      forN
+                 in loop (pk - 1) (pl + 1)
+                      $ forN
                         l
                         ( \ !j (RW r w) ->
                             SA.unsafeGet r j table & \(Ur t, r) ->

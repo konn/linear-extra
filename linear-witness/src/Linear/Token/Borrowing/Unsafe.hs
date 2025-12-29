@@ -18,6 +18,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
@@ -117,8 +118,8 @@ data New p where
 
 unsafeMkNew :: (forall s. p s) -> Linearly %1 -> New p
 unsafeMkNew mk lin =
-  lin `lseq`
-    withNewLocation \(Proxy :: Proxy s) -> MkNew (mk @s) unsafeRW
+  lin
+    `lseq` withNewLocation \(Proxy :: Proxy s) -> MkNew (mk @s) unsafeRW
 
 unsafeConsumeRW :: RW s %1 -> ()
 unsafeConsumeRW (RW R W) = ()
@@ -161,7 +162,8 @@ withNewLocation k =
 type LocAddr :: Location -> Type
 newtype LocAddr s = LocAddr {getLocAddr_ :: LocAddr_}
   deriving (P.Eq, P.Ord)
-  deriving newtype (Hashable)
+
+deriving newtype instance Hashable (LocAddr s)
 
 type KnownLocation :: Location -> Constraint
 class (KnownLocation_ s) => KnownLocation s where

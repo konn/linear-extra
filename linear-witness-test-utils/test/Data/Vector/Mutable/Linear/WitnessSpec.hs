@@ -77,13 +77,13 @@ test_emptyL =
     [ testGroup
         "linearly (\\l -> freeze (emptyL l n x)) = empty n x freeze"
         [ testCase "Int" $
-            unur (LV.empty @Int LV.freeze)
+            unur (LV.empty @_ @Int LV.freeze)
               @?= unur (linearly PL.$ LV.freeze PL.. LV.emptyL)
         , testCase "Double" $
-            unur (LV.empty @Double LV.freeze)
+            unur (LV.empty @_ @Double LV.freeze)
               @?= unur (linearly PL.$ LV.freeze PL.. LV.emptyL)
         , testCase "Bool" $
-            unur (LV.empty @Bool LV.freeze)
+            unur (LV.empty @_ @Bool LV.freeze)
               @?= unur (linearly PL.$ LV.freeze PL.. LV.emptyL)
         ]
     ]
@@ -95,11 +95,11 @@ test_empty =
     [ testGroup
         "unur (empty freeze) = V.empty"
         [ testCase "Int" $
-            unur (LV.empty @Int LV.freeze) @?= V.empty
+            unur (LV.empty @_ @Int LV.freeze) @?= V.empty
         , testCase "Double" $
-            unur (LV.empty @Double LV.freeze) @?= V.empty
+            unur (LV.empty @_ @Double LV.freeze) @?= V.empty
         , testCase "Bool" $
-            unur (LV.empty @Bool LV.freeze) @?= V.empty
+            unur (LV.empty @_ @Bool LV.freeze) @?= V.empty
         ]
     ]
 
@@ -167,10 +167,10 @@ test_push =
           P.expect (Just x, V.fromList xs)
             .$ ( "actual"
                , unur PL.$ linearly \l ->
-                  distribUr
-                    ( LV.freeze
-                        D.<$> LV.pop (LV.push x (LV.fromListL xs l))
-                    )
+                   distribUr
+                     ( LV.freeze
+                         D.<$> LV.pop (LV.push x (LV.fromListL xs l))
+                     )
                )
     ]
 
@@ -190,10 +190,10 @@ test_pop =
             )
             .$ ( "actual"
                , unur PL.$ linearly \l ->
-                  distribUr
-                    ( LV.freeze
-                        D.<$> LV.pop (LV.fromListL xs l)
-                    )
+                   distribUr
+                     ( LV.freeze
+                         D.<$> LV.pop (LV.fromListL xs l)
+                     )
                )
     ]
 
@@ -237,10 +237,10 @@ checkMapMaybe tgt g = do
   F.assert $
     P.expect resl
       .$ ( "actual"
-         , unur PL.$
-            linearly \l ->
-              LV.freeze PL.$
-                LV.mapMaybe (LV.fromListL xs l) f
+         , unur
+             PL.$ linearly \l ->
+               LV.freeze
+                 PL.$ LV.mapMaybe (LV.fromListL xs l) f
          )
 
 checkFilter ::
@@ -260,10 +260,10 @@ checkFilter g = do
   F.assert $
     P.expect resl
       .$ ( "actual"
-         , unur PL.$
-            linearly \l ->
-              LV.freeze PL.$
-                LV.filter (LV.fromListL xs l) p
+         , unur
+             PL.$ linearly \l ->
+               LV.freeze
+                 PL.$ LV.filter (LV.fromListL xs l) p
          )
 
 checkPushSnoc :: (Eq a, Show a) => Gen a -> Property' String ()
@@ -273,11 +273,12 @@ checkPushSnoc g = do
   F.assert $
     P.expect (V.fromList xs `V.snoc` x)
       .$ ( "actual"
-         , unur PL.$
-            linearly PL.$ \l ->
-              LV.freeze PL.$
-                LV.push x PL.$
-                  LV.fromListL xs l
+         , unur
+             PL.$ linearly
+             PL.$ \l ->
+               LV.freeze
+                 PL.$ LV.push x
+                 PL.$ LV.fromListL xs l
          )
 
 test_slice :: TestTree
@@ -291,11 +292,11 @@ test_slice =
         F.assert $
           P.expect sliced
             .$ ( "actual"
-               , unur PL.$
-                  linearly PL.$
-                    LV.freeze
-                      PL.. LV.slice offset range
-                      PL.. LV.fromListL xs
+               , unur
+                   PL.$ linearly
+                   PL.$ LV.freeze
+                   PL.. LV.slice offset range
+                   PL.. LV.fromListL xs
                )
     ]
 
