@@ -15,7 +15,6 @@ extra-source-files:
   README.md
 
 tested-with:
-  ghc ==9.8.4
   ghc ==9.10.2
   ghc ==9.12.2
 

@@ -15,15 +15,15 @@ module Data.Array.Mutable.Linear.Class (
   defaultUnsafeAlloc,
 ) where
 
-import qualified Data.Array.Mutable.Linear.Extra as LB
+import Data.Array.Mutable.Linear.Extra qualified as LB
 import Linear.Token.Linearly
 import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear
-import qualified Prelude as P
+import Prelude qualified as P
 
 class (HasLinearWitness (arr a), Dupable (arr a)) => Array arr a where
   size :: arr a %1 -> (Ur Int, arr a)
-  fromList :: [a] -> (arr a %1 -> Ur b) %1 -> Ur b
+  fromList :: (Movable b) => [a] -> (arr a %1 -> b) %1 -> b
   fromList xs f =
     let len = P.length xs
      in unsafeAlloc len (f . go 0 xs)
@@ -48,7 +48,7 @@ class (HasLinearWitness (arr a), Dupable (arr a)) => Array arr a where
       go !i !sz arr
         | i P.>= sz = arr
         | otherwise = go (i + 1) sz (unsafeSet i a arr)
-  unsafeAlloc :: Int -> (arr a %1 -> Ur b) %1 -> Ur b
+  unsafeAlloc :: (Movable b) => Int -> (arr a %1 -> b) %1 -> b
   unsafeAlloc = defaultUnsafeAlloc
   unsafeAllocL :: Int -> Linearly %1 -> arr a
   unsafeSet :: Int -> a -> arr a %1 -> arr a
@@ -56,8 +56,8 @@ class (HasLinearWitness (arr a), Dupable (arr a)) => Array arr a where
   unsafeSlice :: Int -> Int -> arr a %1 -> (arr a, arr a)
   unsafeResize :: Int -> arr a %1 -> arr a
 
-defaultUnsafeAlloc :: (Array arr a) => Int -> (arr a %1 -> Ur b) %1 -> Ur b
-defaultUnsafeAlloc i f = linearly $ f . unsafeAllocL i
+defaultUnsafeAlloc :: (Movable b, Array arr a) => Int -> (arr a %1 -> b) %1 -> b
+defaultUnsafeAlloc i f = unur $ linearly $ move . f . unsafeAllocL i
 
 unsafeAllocBeside ::
   (Array arr a, HasLinearWitness wit) =>
@@ -68,7 +68,7 @@ unsafeAllocBeside sz wit = besides wit (unsafeAllocL sz)
 
 instance Array LB.Array a where
   size = LB.size
-  fromList :: [a] -> (LB.Array a %1 -> Ur b) %1 -> Ur b
+  fromList :: (Movable b) => [a] -> (LB.Array a %1 -> b) %1 -> b
   fromList = LB.fromList
   unsafeAlloc sz = LB.alloc sz (error "Uninitialised element")
   unsafeAllocL sz = LB.allocL sz (error "Uninitialised element")

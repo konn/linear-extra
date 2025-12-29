@@ -51,17 +51,17 @@ module Data.Array.Mutable.Linear.Primitive (
   unsafeWrite,
 ) where
 
-import qualified Data.Array.Mutable.Linear.Class as C
+import Data.Array.Mutable.Linear.Class qualified as C
 import Data.Array.Mutable.Unlifted.Linear.Primitive (PrimArray#)
-import qualified Data.Array.Mutable.Unlifted.Linear.Primitive as Unlifted
+import Data.Array.Mutable.Unlifted.Linear.Primitive qualified as Unlifted
 import Data.Primitive (Prim)
-import qualified Data.Primitive as Prim
-import qualified Data.Vector.Primitive as PV
+import Data.Primitive qualified as Prim
+import Data.Vector.Primitive qualified as PV
 import GHC.Stack (HasCallStack)
 import Linear.Token.Linearly
 import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear hiding (map, read)
-import qualified Prelude as P
+import Prelude qualified as P
 
 data PrimArray a = PrimArray (PrimArray# a)
   deriving anyclass (HasLinearWitness)
@@ -82,7 +82,7 @@ The size must be non-negative, otherwise this errors.
 
 /See also/: 'unsafeAlloc'
 -}
-alloc :: (HasCallStack, Prim a) => Int -> a -> (PrimArray a %1 -> Ur b) %1 -> Ur b
+alloc :: (HasCallStack, Movable b, Prim a) => Int -> a -> (PrimArray a %1 -> b) %1 -> b
 {-# ANN alloc "HLint: ignore Avoid lambda" #-}
 alloc s x f
   | s < 0 = error "PrimArray.alloc: negative size" f
@@ -99,7 +99,7 @@ allocL s x l
   | otherwise = PrimArray (Unlifted.allocL s x l)
 
 -- | Same as 'alloc', but without initial value.
-unsafeAlloc :: (Prim a) => Int -> (PrimArray a %1 -> Ur b) %1 -> Ur b
+unsafeAlloc :: forall b a. (Movable b, Prim a) => Int -> (PrimArray a %1 -> b) %1 -> b
 {-# ANN unsafeAlloc "HLint: ignore Avoid lambda" #-}
 unsafeAlloc s f = Unlifted.unsafeAlloc s \arr# -> f (PrimArray arr#)
 
@@ -131,11 +131,12 @@ unsafeAllocBeside s (PrimArray orig) = wrap (Unlifted.unsafeAllocBeside s orig)
     wrap (# orig, new #) = (PrimArray orig, PrimArray new)
 
 fromList ::
-  (Prim a) =>
+  forall b a.
+  (Movable b, Prim a) =>
   [a] ->
-  (PrimArray a %1 -> Ur b) %1 ->
-  Ur b
-fromList list (f :: PrimArray a %1 -> Ur b) =
+  (PrimArray a %1 -> b) %1 ->
+  b
+fromList list f =
   unsafeAlloc
     (P.length list)
     (f . insert)

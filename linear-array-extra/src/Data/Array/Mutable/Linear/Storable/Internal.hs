@@ -34,7 +34,7 @@ module Data.Array.Mutable.Linear.Storable.Internal (
   unsafeSlice,
 ) where
 
-import qualified Data.Array.Mutable.Linear.Class as C
+import Data.Array.Mutable.Linear.Class qualified as C
 import Data.Function (fix)
 import Foreign
 import Foreign.Marshal.Pure (KnownRepresentable, MkRepresentable (..), Representable (..))
@@ -45,8 +45,8 @@ import GHC.IO (noDuplicate)
 import Linear.Token.Linearly (Linearly, linearly)
 import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear
-import qualified Unsafe.Linear as Unsafe
-import qualified Prelude as P
+import Unsafe.Linear qualified as Unsafe
+import Prelude qualified as P
 
 -- TODO: consider Pool-based variant?
 data SArray a where
@@ -90,10 +90,10 @@ instance (Storable a) => Dupable (SArray a) where
       P.pure (SArray i mu, SArray i mu')
   {-# NOINLINE dup2 #-}
 
-unsafeAlloc :: (Storable a) => Int -> (SArray a %1 -> Ur b) %1 -> Ur b
+unsafeAlloc :: forall b a. (Movable b, Storable a) => Int -> (SArray a %1 -> b) %1 -> b
 {-# NOINLINE unsafeAlloc #-}
-unsafeAlloc n (f :: SArray a %1 -> b) =
-  f (SArray n (unsafeStrictPerformIO $ mallocArray n))
+unsafeAlloc n f =
+  unur (move (f (SArray n (unsafeStrictPerformIO $ mallocArray n))))
 
 unsafeAllocL :: (Storable a) => Int -> Linearly %1 -> SArray a
 {-# NOINLINE unsafeAllocL #-}
@@ -121,13 +121,13 @@ fill a = Unsafe.toLinear \arr@(SArray n ptr) ->
 fromListL :: (Storable a) => [a] -> Linearly %1 -> SArray a
 {-# NOINLINE fromListL #-}
 fromListL (xs :: [a]) l =
-  l `lseq`
-    let len = P.length xs
-     in SArray len $ unsafeStrictPerformIO (newArray xs)
+  l
+    `lseq` let len = P.length xs
+            in SArray len $ unsafeStrictPerformIO (newArray xs)
 
-fromList :: (Storable a) => [a] -> (SArray a %1 -> Ur b) %1 -> Ur b
+fromList :: (Movable b, Storable a) => [a] -> (SArray a %1 -> b) %1 -> b
 {-# INLINE fromList #-}
-fromList xs f = linearly $ f . fromListL xs
+fromList xs f = unur $ linearly $ move . f . fromListL xs
 
 unsafeSet :: (Storable a) => Int -> a -> SArray a %1 -> SArray a
 {-# NOINLINE unsafeSet #-}

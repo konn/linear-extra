@@ -15,17 +15,17 @@ module Data.AtomicCounter.LinearSpec (test_AtomicCounter) where
 import Control.Concurrent (threadDelay)
 import Control.Parallel.Linear (par)
 import Data.AtomicCounter.Linear
-import qualified Data.Bifunctor.Linear as BiL
+import Data.Bifunctor.Linear qualified as BiL
 import Data.Foldable (foldMap')
-import qualified Data.Tuple.Linear as TL
+import Data.Tuple.Linear qualified as TL
 import GHC.Generics (Generic)
 import Prelude.Linear (Sum (..), Ur (..), (&))
-import qualified Prelude.Linear as PL
+import Prelude.Linear qualified as PL
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Falsify.Generator (frequency)
-import qualified Test.Falsify.Generator as G
+import Test.Falsify.Generator qualified as G
 import Test.Falsify.Predicate ((.$))
-import qualified Test.Falsify.Predicate as P
+import Test.Falsify.Predicate qualified as P
 import Test.Falsify.Range (between)
 import Test.Tasty
 import Test.Tasty.Falsify
@@ -43,7 +43,7 @@ instG =
   frequency
     [ (2, pure Inc)
     , (2, pure Dec)
-    , (1, Wait . fromIntegral <$> G.integral @Word (between (1, 1000)))
+    , (1, Wait . fromIntegral <$> G.inRange @Word (between (1, 1000)))
     ]
 
 test_AtomicCounter :: TestTree

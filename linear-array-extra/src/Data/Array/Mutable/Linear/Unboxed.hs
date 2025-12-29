@@ -40,23 +40,25 @@ module Data.Array.Mutable.Linear.Unboxed (
 
 import Data.Array.Mutable.Linear.Unboxed.Internal
 import Data.Vector.Unboxed (Unbox)
-import qualified Data.Vector.Unboxed as U
-import qualified Data.Vector.Unboxed.Mutable as MU
+import Data.Vector.Unboxed qualified as U
+import Data.Vector.Unboxed.Mutable qualified as MU
 import GHC.Exts (runRW#)
-import qualified GHC.Exts as GHC
+import GHC.Exts qualified as GHC
 import GHC.IO (unIO)
 import GHC.Stack (HasCallStack)
 import Linear.Token.Linearly
 import Prelude.Linear hiding (map)
-import qualified Unsafe.Linear as Unsafe
-import qualified Prelude as P
+import Unsafe.Linear qualified as Unsafe
+import Prelude qualified as P
 
-alloc :: (HasCallStack, U.Unbox a) => Int -> a -> (UArray a %1 -> Ur b) %1 -> Ur b
+alloc :: (HasCallStack, Movable b, U.Unbox a) => Int -> a -> (UArray a %1 -> b) %1 -> b
 {-# NOINLINE alloc #-}
 alloc n x f
   | n < 0 = error ("UArray.alloc: Negative length: " <> show n) f
   | otherwise = case runRW# (unIO $ MU.replicate n x) of
-      (# _, mu #) -> f (UArray mu)
+      (# !_, !mu #) ->
+        let %1 b = f (UArray mu)
+         in unur $ move b
 
 allocL :: (HasCallStack, U.Unbox a) => Int -> a -> Linearly %1 -> UArray a
 {-# NOINLINE allocL #-}

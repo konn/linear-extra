@@ -34,32 +34,34 @@ module Data.AtomicCounter.Linear (
 ) where
 
 import Control.Exception (evaluate, finally)
-import qualified Control.Monad as P
+import Control.Monad qualified as P
 import Data.Word
 import Foreign (free, peek, poke)
-import qualified Foreign
+import Foreign qualified
 import Foreign.Atomic.Internal
 import Foreign.Marshal.Array
 import Foreign.Marshal.Pure (MkRepresentable (..), Pool, Representable (..))
 import Foreign.Storable.Generic (GStorable)
 import GHC.Exts
-import qualified GHC.Exts as GHC
+import GHC.Exts qualified as GHC
 import GHC.Generics (Generic)
 import GHC.IO (uninterruptibleMask_, unsafeDupablePerformIO)
-import qualified GHC.IO as IO
+import GHC.IO qualified as IO
 import Prelude.Linear
 import System.IO.Unsafe (unsafePerformIO)
-import qualified Unsafe.Linear as Unsafe
-import qualified Prelude as P
+import Unsafe.Linear qualified as Unsafe
+import Prelude qualified as P
 
 -- | Thread-safe atomic counter.
 data Counter
   = Counter
-      -- | Counter body.
-      --  Memory layout: | number of duplicated counters | count |
+      {- | Counter body.
+      Memory layout: | number of duplicated counters | count |
+      -}
       {-# UNPACK #-} !(Ptr Word)
-      -- | Set to @1@ if already released.
-      -- Used in 'withCounterCapacity' to ensure exception resilience.
+      {- | Set to @1@ if already released.
+      Used in 'withCounterCapacity' to ensure exception resilience.
+      -}
       {-# UNPACK #-} !(Ptr Bool)
   deriving (Generic)
   deriving anyclass (GStorable)
@@ -119,20 +121,23 @@ newCounter = Unsafe.toLinear \pool ->
         free ptr
         free releasedP
 
-withCounter :: (Counter %1 -> Ur a) %1 -> Ur a
+withCounter :: (Movable a) => (Counter %1 -> a) %1 -> a
 {-# INLINE withCounter #-}
 withCounter = withCounterCapacity 0
 
-withCounterCapacity :: Word -> (Counter %1 -> Ur a) %1 -> Ur a
+withCounterCapacity :: (Movable a) => Word -> (Counter %1 -> a) %1 -> a
 {-# NOINLINE withCounterCapacity #-}
-withCounterCapacity i = Unsafe.toLinear \k -> unsafeDupablePerformIO do
-  ptr <- newArray [1, i]
-  releasedP <- Foreign.new False
-  evaluate (k (Counter ptr releasedP)) `finally` do
-    released <- peek releasedP
-    P.unless released $ do
-      free ptr
-      free releasedP
+withCounterCapacity i = Unsafe.toLinear \k ->
+  let %1 !a = unsafeDupablePerformIO do
+        ptr <- newArray [1, i]
+        releasedP <- Foreign.new False
+        evaluate (k (Counter ptr releasedP)) `finally` do
+          released <- peek releasedP
+          P.unless released $ do
+            free ptr
+
+            free releasedP
+   in unur $! move a
 
 getCount :: Counter %1 -> (Ur Word, Counter)
 {-# NOINLINE getCount #-}
