@@ -18,29 +18,27 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-partial-fields #-}
-{-# OPTIONS_GHC -fplugin Foreign.Storable.Generic.Plugin #-}
-{-# OPTIONS_GHC -fplugin-opt=Foreign.Storable.Generic.Plugin:-v0 #-}
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 
 module Data.Ref.Linear.ReferenceCount.Borrowable.ThreadUnsafe where
 
 import Data.AtomicCounter.Linear (Counter, decrement', decrement_, newCounter)
 import Data.Kind
-import qualified Data.Replicator.Linear as Rep
+import Data.Replicator.Linear qualified as Rep
 import Data.Word
 import Foreign (Ptr, Storable (..), castPtr)
 import Foreign.Marshal.Pure (Box, Pool, Representable)
 import Foreign.Marshal.Pure.Extra ()
 import Foreign.Marshal.Pure.Internal (Box (..), Pool (..), insertAfter, reprNew)
 import Foreign.Storable.Generic (GStorable)
-import qualified GHC.Exts as GHC
+import GHC.Exts qualified as GHC
 import GHC.Generics (Generic)
-import qualified GHC.IO as IO
+import GHC.IO qualified as IO
 import Linear.Token.Borrowing.Unsafe
 import Linear.Token.Linearly.Unsafe (linearWitness)
 import Prelude.Linear
-import qualified Unsafe.Linear as Unsafe
-import qualified Prelude as P
+import Unsafe.Linear qualified as Unsafe
+import Prelude qualified as P
 
 -- | Memory layout: |strong|weak|body|
 newtype RcBox a = RcBox (# Counter, Counter, Box a #)

@@ -17,8 +17,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -funbox-strict-fields #-}
-{-# OPTIONS_GHC -fplugin Foreign.Storable.Generic.Plugin #-}
-{-# OPTIONS_GHC -fplugin-opt=Foreign.Storable.Generic.Plugin:-v0 #-}
 
 module Data.Array.Mutable.Linear.Storable.Internal (
   SArray (..),
