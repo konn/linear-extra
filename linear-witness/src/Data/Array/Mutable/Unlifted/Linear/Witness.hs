@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LinearTypes #-}
@@ -23,8 +24,8 @@ allocL :: Int -> a -> Linearly %1 -> Array# a
 {-# ANN allocL "HLint: ignore Avoid lambda" #-}
 -- We need 'noinline' here, otherwise GHC will fuse allocL away and
 -- unsound allocation can occur when multiple allocation done in serial!
-allocL = GHC.noinline \(GHC.I# s) a -> Unsafe.toLinear \_ ->
+allocL = GHC.noinline \(GHC.I# n) a -> Unsafe.toLinear \ !_ ->
   GHC.runRW# P.$ \st ->
-    case GHC.newArray# s a st of
-      (# _, arr #) -> unsafeCoerce# arr
+    case GHC.newArray# n a st of
+      (# !_, !arr #) -> unsafeCoerce# arr
 {-# NOINLINE allocL #-} -- prevents runRW# from floating outwards

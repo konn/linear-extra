@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,7 +21,7 @@ import qualified Prelude as P
 
 emptyL :: (Keyed k) => Int -> Linearly %1 -> HashMap k v
 emptyL size l =
-  let cap = P.max 1 size
+  let !cap = P.max 1 size
    in HashMap 0 cap (Array.allocL cap Nothing l)
 
 fromListL :: (Keyed k) => [(k, v)] -> Linearly %1 -> HashMap k v
