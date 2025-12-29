@@ -72,25 +72,25 @@ module Data.Vector.Mutable.Linear.Unboxed (
   ifoldSML',
 ) where
 
-import qualified Control.Functor.Linear as C
+import Control.Functor.Linear qualified as C
 import Control.Monad.Fix (fix)
 import Data.Array.Mutable.Linear.Unboxed (UArray)
-import qualified Data.Array.Mutable.Linear.Unboxed as Array
-import qualified Data.Array.Mutable.Linear.Unboxed.Internal as Array
-import qualified Data.Bifunctor.Linear as BiL
+import Data.Array.Mutable.Linear.Unboxed qualified as Array
+import Data.Array.Mutable.Linear.Unboxed.Internal qualified as Array
+import Data.Bifunctor.Linear qualified as BiL
 import Data.Coerce (coerce)
 import Data.Unrestricted.Linear (UrT (..), runUrT)
-import qualified Data.Unrestricted.Linear as Ur
-import qualified Data.Vector.Unboxed as U
-import qualified Data.Vector.Unboxed.Mutable as MU
+import Data.Unrestricted.Linear qualified as Ur
+import Data.Vector.Unboxed qualified as U
+import Data.Vector.Unboxed.Mutable qualified as MU
 import GHC.Exts (runRW#)
 import GHC.IO (unIO)
 import GHC.Stack (HasCallStack)
-import Linear.Witness.Token
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import Linear.Token.Linearly
+import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear hiding (filter, map, mapMaybe)
-import qualified Unsafe.Linear as Unsafe
-import qualified Prelude as P
+import Unsafe.Linear qualified as Unsafe
+import Prelude qualified as P
 
 data Vector a where
   Vec :: {-# UNPACK #-} !Int -> UArray a %1 -> Vector a
@@ -103,13 +103,13 @@ instance (U.Unbox a) => Dupable (Vector a) where
   dup2 (Vec n arr) =
     BiL.bimap (Vec n) (Vec n) (dup2 arr)
 
-empty :: (U.Unbox a) => (Vector a %1 -> Ur b) %1 -> Ur b
+empty :: forall b a. (Movable b, U.Unbox a) => (Vector a %1 -> b) %1 -> b
 empty f = Array.unsafeAlloc 0 (f . Vec 0)
 
 emptyL :: (U.Unbox a) => Linearly %1 -> Vector a
 emptyL = Vec 0 . Array.unsafeAllocL 0
 
-constant :: (HasCallStack, U.Unbox a) => Int -> a -> (Vector a %1 -> Ur b) %1 -> Ur b
+constant :: forall b a. (HasCallStack, Movable b, U.Unbox a) => Int -> a -> (Vector a %1 -> b) %1 -> b
 constant n a f
   | n < 0 = error ("constant: must be non-negative but got: " <> show n) f
   | otherwise = Array.unsafeAlloc n (f . Vec n . Array.fill a)
@@ -120,7 +120,7 @@ constantL n a
   | otherwise = Vec n . Array.fill a . Array.unsafeAllocL n
 
 -- | Allocator from a list
-fromList :: (U.Unbox a) => [a] -> (Vector a %1 -> Ur b) %1 -> Ur b
+fromList :: forall b a. (Movable b, U.Unbox a) => [a] -> (Vector a %1 -> b) %1 -> b
 fromList xs f = Array.fromList xs (f . fromArray)
 
 -- | Allocator from a list
@@ -206,11 +206,11 @@ appendVector :: (U.Unbox a) => U.Vector a -> Vector a %1 -> Vector a
 appendVector news vec =
   let growth = U.length news
    in growToFit growth vec & Unsafe.toLinear \(Vec s (Array.UArray arr)) ->
-        case runRW# $
-          unIO $
-            U.unsafeCopy
-              (MU.unsafeSlice s growth arr)
-              news of
+        case runRW#
+          $ unIO
+          $ U.unsafeCopy
+            (MU.unsafeSlice s growth arr)
+            news of
           (# _, () #) -> Vec (s + growth) (Array.UArray arr)
 
 {- | Pop from the end of the vector. This will never shrink the vector, use

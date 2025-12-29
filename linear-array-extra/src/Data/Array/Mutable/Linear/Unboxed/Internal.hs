@@ -28,18 +28,18 @@ module Data.Array.Mutable.Linear.Unboxed.Internal (
   unsafeAllocL,
 ) where
 
-import qualified Data.Array.Mutable.Linear.Class as C
-import qualified Data.Vector.Unboxed as U
-import qualified Data.Vector.Unboxed.Mutable as MU
+import Data.Array.Mutable.Linear.Class qualified as C
+import Data.Vector.Unboxed qualified as U
+import Data.Vector.Unboxed.Mutable qualified as MU
 import GHC.Base (runRW#, unIO)
 import GHC.Exts (RealWorld)
-import qualified GHC.Exts as GHC
+import GHC.Exts qualified as GHC
 import GHC.IO (noDuplicate)
-import Linear.Witness.Token (Linearly)
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import Linear.Token.Linearly (Linearly)
+import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear
-import qualified Unsafe.Linear as Unsafe
-import qualified Prelude as P
+import Unsafe.Linear qualified as Unsafe
+import Prelude qualified as P
 
 newtype UArray a = UArray (MU.MVector RealWorld a)
   deriving anyclass (HasLinearWitness)
@@ -68,13 +68,15 @@ instance (U.Unbox a) => C.Array UArray a where
   unsafeResize = unsafeResize
   unsafeAllocL = unsafeAllocL
 
-unsafeAlloc :: (U.Unbox a) => Int -> (UArray a %1 -> Ur b) %1 -> Ur b
+unsafeAlloc :: forall b a. (Movable b, U.Unbox a) => Int -> (UArray a %1 -> b) %1 -> b
 {-# NOINLINE unsafeAlloc #-}
-unsafeAlloc n (f :: UArray a %1 -> b) =
+unsafeAlloc n f =
   case runRW# (unIO $ MU.unsafeNew n) of
-    (# _, mu #) -> f (UArray mu)
+    (# _, mu #) ->
+      let %1 b = f (UArray mu)
+       in move b & \(Ur b) -> b
 
-fromList :: (U.Unbox a) => [a] -> (UArray a %1 -> Ur b) %1 -> Ur b
+fromList :: forall b a. (Movable b, U.Unbox a) => [a] -> (UArray a %1 -> b) %1 -> b
 fromList (xs :: [a]) f =
   let len = P.length xs
    in unsafeAlloc len (f . go 0 xs)

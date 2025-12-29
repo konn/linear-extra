@@ -1,8 +1,7 @@
 name: Build and Test
-on: 
-  push: {branches: ["main"]}
+on:
+  push: { branches: ["main"] }
   pull_request:
-
 
 jobs:
   ci-enumerate:
@@ -11,16 +10,16 @@ jobs:
     outputs:
       plan: ${{steps.list-ci.outputs.plan}}
     steps:
-    - uses: actions/checkout@v3
-      with:
-        ref: ${{github.event.pull_request.head.sha || github.sha}}
-    - name: Enumerate CI plans
-      id: list-ci
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const script = require('./ci/scripts/enumerate-ci.js')
-          await script({github, context, core, glob, io, require})
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{github.event.pull_request.head.sha || github.sha}}
+      - name: Enumerate CI plans
+        id: list-ci
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const script = require('./ci/scripts/enumerate-ci.js')
+            await script({github, context, core, glob, io, require})
 
   build:
     name: Build (${{matrix.plan.name}})
@@ -31,7 +30,7 @@ jobs:
         plan: ${{fromJSON(needs.ci-enumerate.outputs.plan)}}
       fail-fast: false
     env:
-      cabal-version: 3.10.2.0
+      cabal-version: 3.14.2.0
       cabal: "cabal --project-file=${{matrix.plan.path}}"
       ghc: ${{matrix.plan.ghc}}
       project-file: ${{matrix.plan.path}}
@@ -43,101 +42,101 @@ jobs:
       tests: ${{steps.list-bins.outputs.tests}}
       artifact: "artifact-${{matrix.plan.name}}"
     steps:
-    - uses: actions/checkout@v3
-      with:
-        ref: ${{github.event.pull_request.head.sha || github.sha}}
-    - name: Calculate hash keys
-      uses: actions/github-script@v6
-      id: cache-keys
-      with:
-        script: |
-          function build_keys(comps) {
-            const fallbacks = comps.reduce(
-              (accum, cur) => 
-                  [accum[0].concat([cur])].concat(accum),
-              [[]]
-            ).slice(1,-1).map(e => e.concat("").join('-'))
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{github.event.pull_request.head.sha || github.sha}}
+      - name: Calculate hash keys
+        uses: actions/github-script@v8
+        id: cache-keys
+        with:
+          script: |
+            function build_keys(comps) {
+              const fallbacks = comps.reduce(
+                (accum, cur) => 
+                    [accum[0].concat([cur])].concat(accum),
+                [[]]
+              ).slice(1,-1).map(e => e.concat("").join('-'))
 
-            return {key: comps.join("-"), restore: fallbacks.join("\n")}
-          }
-          const project_hash = await glob.hashFiles('cabal.project', 'cabal.project.freeze')
-          core.setOutput('project', project_hash)
+              return {key: comps.join("-"), restore: fallbacks.join("\n")}
+            }
+            const project_hash = await glob.hashFiles('cabal.project', 'cabal.project.freeze')
+            core.setOutput('project', project_hash)
 
-          const package_hash = await glob.hashFiles('**/package.yaml', '**/*.cabal')
-          core.setOutput('package', package_hash)
+            const package_hash = await glob.hashFiles('**/package.yaml', '**/*.cabal')
+            core.setOutput('package', package_hash)
 
-          const source_hash = await glob.hashFiles('**/*.hs', '**/*.lhs', '**/*.hsig', '**/*.hs-boot', '**/*.c', '**/*.h', '**/*.chs', '**/*.hsc')
-          core.setOutput('source', source_hash)
+            const source_hash = await glob.hashFiles('**/*.hs', '**/*.lhs', '**/*.hsig', '**/*.hs-boot', '**/*.c', '**/*.h', '**/*.chs', '**/*.hsc')
+            core.setOutput('source', source_hash)
 
-          const store_prefix = "store-${{runner.os}}-${{env.plan}}"
-          core.setOutput("store-prefix", store_prefix)
-          const store_keys = build_keys([store_prefix, project_hash, package_hash])
-          core.setOutput("store", store_keys.key)
-          core.setOutput("store-restore", store_keys.restore)
+            const store_prefix = "store-${{runner.os}}-${{env.plan}}"
+            core.setOutput("store-prefix", store_prefix)
+            const store_keys = build_keys([store_prefix, project_hash, package_hash])
+            core.setOutput("store", store_keys.key)
+            core.setOutput("store-restore", store_keys.restore)
 
-          const dist_prefix = "dist-${{runner.os}}-${{env.plan}}"
-          core.setOutput("dist-prefix", dist_prefix)
-          const dist_key_comps = [
-            dist_prefix, project_hash, package_hash, source_hash
-          ]
-          const dist_keys = build_keys(dist_key_comps)
-          core.setOutput('dist', dist_keys.key)
-          core.setOutput('dist-restore', dist_keys.restore)
+            const dist_prefix = "dist-${{runner.os}}-${{env.plan}}"
+            core.setOutput("dist-prefix", dist_prefix)
+            const dist_key_comps = [
+              dist_prefix, project_hash, package_hash, source_hash
+            ]
+            const dist_keys = build_keys(dist_key_comps)
+            core.setOutput('dist', dist_keys.key)
+            core.setOutput('dist-restore', dist_keys.restore)
 
-    - name: Setup Haskell
-      uses: haskell-actions/setup@v2
-      with:
-        enable-stack: false
-        cabal-version: ${{env.cabal-version}}
-        ghc-version: ${{env.ghc}}
-    - name: Restore ~/.cabal/store
-      uses: actions/cache/restore@v3
-      with:
-        path: ~/.cabal/store
-        key: ${{steps.cache-keys.outputs.store}}
-        restore-keys: ${{steps.cache-keys.outputs.store-restore}}
-    - name: Restore dist-newstyle
-      uses: actions/cache/restore@v3
-      with:
-        path: dist-newstyle
-        key: ${{steps.cache-keys.outputs.dist}}
-        restore-keys: ${{steps.cache-keys.outputs.dist-restore}}
-    - name: cabal configure
-      run: |
-        ${{env.cabal}} v2-configure --enable-tests --enable-benchmarks --enable-optimisation=2
-        ${{env.cabal}} update
-    - name: Build Dependencies
-      run: | 
-        ${{env.cabal}} build --only-dependencies all
-    - name: Save ~/.cabal/store Cache
-      uses: actions/cache/save@v3
-      with:
-        path: ~/.cabal/store
-        key: ${{steps.cache-keys.outputs.store}}
-    - name: Build All
-      run: | 
-        ${{env.cabal}} build all
-    - name: Save dist-newstyle Cache
-      uses: actions/cache/save@v3
-      with:
-        path: dist-newstyle
-        key: ${{steps.cache-keys.outputs.dist}}
+      - name: Setup Haskell
+        uses: haskell-actions/setup@v2
+        with:
+          enable-stack: false
+          cabal-version: ${{env.cabal-version}}
+          ghc-version: ${{env.ghc}}
+      - name: Restore ~/.cabal/store
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cabal/store
+          key: ${{steps.cache-keys.outputs.store}}
+          restore-keys: ${{steps.cache-keys.outputs.store-restore}}
+      - name: Restore dist-newstyle
+        uses: actions/cache/restore@v5
+        with:
+          path: dist-newstyle
+          key: ${{steps.cache-keys.outputs.dist}}
+          restore-keys: ${{steps.cache-keys.outputs.dist-restore}}
+      - name: cabal configure
+        run: |
+          ${{env.cabal}} v2-configure --enable-tests --enable-benchmarks --enable-optimisation=2
+          ${{env.cabal}} update
+      - name: Build Dependencies
+        run: |
+          ${{env.cabal}} build --only-dependencies all
+      - name: Save ~/.cabal/store Cache
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cabal/store
+          key: ${{steps.cache-keys.outputs.store}}
+      - name: Build All
+        run: |
+          ${{env.cabal}} build all
+      - name: Save dist-newstyle Cache
+        uses: actions/cache/save@v5
+        with:
+          path: dist-newstyle
+          key: ${{steps.cache-keys.outputs.dist}}
 
-    - name: Collect binaries
-      continue-on-error: true
-      run: ./ci/scripts/collect-bins.sh "${{env.artifact-name}}"
-    - name: Upload Aritracts
-      uses: actions/upload-artifact@v3
-      with:
-        path: ${{env.artifact-name}}.tar.zst
-        name: ${{env.artifact-name}}
-        retention-days: 1
-    - name: List Binaries
-      id: list-bins
-      shell: bash
-      run: |
-        echo "benchs=$(jq -cMnR '[inputs]' <"${{env.artifact-name}}"/benchs.list)" >>"${GITHUB_OUTPUT}"
-        echo "tests=$(jq -cMnR '[inputs]' <"${{env.artifact-name}}"/tests.list)" >>"${GITHUB_OUTPUT}"
+      - name: Collect binaries
+        continue-on-error: true
+        run: ./ci/scripts/collect-bins.sh "${{env.artifact-name}}"
+      - name: Upload Aritracts
+        uses: actions/upload-artifact@v6
+        with:
+          path: ${{env.artifact-name}}.tar.zst
+          name: ${{env.artifact-name}}
+          retention-days: 1
+      - name: List Binaries
+        id: list-bins
+        shell: bash
+        run: |
+          echo "benchs=$(jq -cMnR '[inputs]' <"${{env.artifact-name}}"/benchs.list)" >>"${GITHUB_OUTPUT}"
+          echo "tests=$(jq -cMnR '[inputs]' <"${{env.artifact-name}}"/tests.list)" >>"${GITHUB_OUTPUT}"
 
   test:
     name: Test (${{matrix.plan.name}})
@@ -148,7 +147,7 @@ jobs:
         plan: ${{fromJSON(needs.ci-enumerate.outputs.plan)}}
       fail-fast: false
     env:
-      cabal: 3.10.1.0
+      cabal: 3.14.2.0
       ghc: ${{matrix.plan.ghc}}
       project-file: ${{matrix.plan.path}}
       plan: ${{matrix.plan.name}}
@@ -157,13 +156,13 @@ jobs:
     steps:
       - name: Faile when Corresponding Build wouldn't succeeded
         if: ${{needs.build.result != 'success' }}
-        run: echo "BUILD FAILED" >&2; xit 1
-      - uses: actions/checkout@v3
+        run: echo "BUILD FAILED" >&2; exit 1
+      - uses: actions/checkout@v6
         with:
           ref: ${{github.event.pull_request.head.sha || github.sha}}
       - name: Download artifacts
         id: download
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v7
       - name: Decompress
         run: tar xaf ${{env.artifact}}/${{env.artifact}}.tar.zst
       - name: Run Tests

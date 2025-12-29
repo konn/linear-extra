@@ -2,11 +2,10 @@
   "emeraldwalk.runonsave": {
     "commands": [
       {
-        "cmd": "bash -c 'find . -name 'package.yaml' | while read -r FILE; do hpack \"${FILE}\"; done'",
+        "cmd": "find . -not -path 'dist-newstyle/**/*' \\( -name '*.cabal' -or -name 'cabal\\.project*' \\) -exec cabal-gild --io {} \\;",
         "isAsync": true,
-        "match": "(package\\.yaml|\\.l?hs)$"
+        "match": "(\\.cabal|\\.l?hs)$"
       }
     ]
-  },
-  "git.branchProtection": ["main"]
+  }
 }

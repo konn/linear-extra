@@ -20,22 +20,22 @@ module Data.Vector.Mutable.Linear.WitnessSpec (
   test_doubleAlloc_empty,
 ) where
 
-import qualified Data.Functor.Linear as D
+import Data.Functor.Linear qualified as D
 import Data.Unrestricted.Linear (unur)
-import qualified Data.Unrestricted.Linear as Ur
-import qualified Data.Vector as V
-import qualified Data.Vector.Mutable.Linear as LV
-import qualified Data.Vector.Mutable.Linear.Witness as LV
-import Linear.Witness.Token (linearly)
-import Linear.Witness.Token.TestUtils
-import qualified Prelude.Linear as PL
-import qualified Test.Falsify.Generator as F
+import Data.Unrestricted.Linear qualified as Ur
+import Data.Vector qualified as V
+import Data.Vector.Mutable.Linear qualified as LV
+import Data.Vector.Mutable.Linear.Witness qualified as LV
+import Linear.Token.Linearly (linearly)
+import Linear.Token.Linearly.TestUtils
+import Prelude.Linear qualified as PL
+import Test.Falsify.Generator qualified as F
 import Test.Falsify.Predicate ((.$))
-import qualified Test.Falsify.Predicate as P
-import qualified Test.Falsify.Range as F
+import Test.Falsify.Predicate qualified as P
+import Test.Falsify.Range qualified as F
 import Test.Tasty
 import Test.Tasty.Falsify
-import qualified Test.Tasty.Falsify as F
+import Test.Tasty.Falsify qualified as F
 import Test.Tasty.HUnit (testCase, (@?=))
 
 test_constantL :: TestTree
@@ -77,14 +77,14 @@ test_emptyL =
     [ testGroup
         "linearly (\\l -> freeze (emptyL l n x)) = empty n x freeze"
         [ testCase "Int" $
-            unur (LV.empty @Int LV.freeze)
-              @?= unur (linearly PL.$ LV.freeze PL.. LV.emptyL)
+            unur (LV.empty LV.freeze)
+              @?= unur (linearly PL.$ LV.freeze PL.. LV.emptyL @Int)
         , testCase "Double" $
-            unur (LV.empty @Double LV.freeze)
-              @?= unur (linearly PL.$ LV.freeze PL.. LV.emptyL)
+            unur (LV.empty LV.freeze)
+              @?= unur (linearly PL.$ LV.freeze PL.. LV.emptyL @Double)
         , testCase "Bool" $
-            unur (LV.empty @Bool LV.freeze)
-              @?= unur (linearly PL.$ LV.freeze PL.. LV.emptyL)
+            unur (LV.empty LV.freeze)
+              @?= unur (linearly PL.$ LV.freeze PL.. LV.emptyL @Bool)
         ]
     ]
 
@@ -95,11 +95,11 @@ test_empty =
     [ testGroup
         "unur (empty freeze) = V.empty"
         [ testCase "Int" $
-            unur (LV.empty @Int LV.freeze) @?= V.empty
+            unur (LV.empty LV.freeze) @?= V.empty @Int
         , testCase "Double" $
-            unur (LV.empty @Double LV.freeze) @?= V.empty
+            unur (LV.empty LV.freeze) @?= V.empty @Double
         , testCase "Bool" $
-            unur (LV.empty @Bool LV.freeze) @?= V.empty
+            unur (LV.empty LV.freeze) @?= V.empty @Bool
         ]
     ]
 
@@ -167,10 +167,10 @@ test_push =
           P.expect (Just x, V.fromList xs)
             .$ ( "actual"
                , unur PL.$ linearly \l ->
-                  distribUr
-                    ( LV.freeze
-                        D.<$> LV.pop (LV.push x (LV.fromListL xs l))
-                    )
+                   distribUr
+                     ( LV.freeze
+                         D.<$> LV.pop (LV.push x (LV.fromListL xs l))
+                     )
                )
     ]
 
@@ -190,10 +190,10 @@ test_pop =
             )
             .$ ( "actual"
                , unur PL.$ linearly \l ->
-                  distribUr
-                    ( LV.freeze
-                        D.<$> LV.pop (LV.fromListL xs l)
-                    )
+                   distribUr
+                     ( LV.freeze
+                         D.<$> LV.pop (LV.fromListL xs l)
+                     )
                )
     ]
 
@@ -237,10 +237,10 @@ checkMapMaybe tgt g = do
   F.assert $
     P.expect resl
       .$ ( "actual"
-         , unur PL.$
-            linearly \l ->
-              LV.freeze PL.$
-                LV.mapMaybe (LV.fromListL xs l) f
+         , unur
+             PL.$ linearly \l ->
+               LV.freeze
+                 PL.$ LV.mapMaybe (LV.fromListL xs l) f
          )
 
 checkFilter ::
@@ -260,10 +260,10 @@ checkFilter g = do
   F.assert $
     P.expect resl
       .$ ( "actual"
-         , unur PL.$
-            linearly \l ->
-              LV.freeze PL.$
-                LV.filter (LV.fromListL xs l) p
+         , unur
+             PL.$ linearly \l ->
+               LV.freeze
+                 PL.$ LV.filter (LV.fromListL xs l) p
          )
 
 checkPushSnoc :: (Eq a, Show a) => Gen a -> Property' String ()
@@ -273,11 +273,12 @@ checkPushSnoc g = do
   F.assert $
     P.expect (V.fromList xs `V.snoc` x)
       .$ ( "actual"
-         , unur PL.$
-            linearly PL.$ \l ->
-              LV.freeze PL.$
-                LV.push x PL.$
-                  LV.fromListL xs l
+         , unur
+             PL.$ linearly
+             PL.$ \l ->
+               LV.freeze
+                 PL.$ LV.push x
+                 PL.$ LV.fromListL xs l
          )
 
 test_slice :: TestTree
@@ -291,11 +292,11 @@ test_slice =
         F.assert $
           P.expect sliced
             .$ ( "actual"
-               , unur PL.$
-                  linearly PL.$
-                    LV.freeze
-                      PL.. LV.slice offset range
-                      PL.. LV.fromListL xs
+               , unur
+                   PL.$ linearly
+                   PL.$ LV.freeze
+                   PL.. LV.slice offset range
+                   PL.. LV.fromListL xs
                )
     ]
 

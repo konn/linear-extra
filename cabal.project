@@ -1,1 +1,4 @@
 packages: */*.cabal
+allow-newer:
+  derive-storable-plugin:*,
+  falsify:optparse-applicative,

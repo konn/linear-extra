@@ -40,15 +40,15 @@ module Data.Array.Mutable.Linear.Storable (
 ) where
 
 import Data.Array.Mutable.Linear.Storable.Internal
-import qualified Data.Vector.Storable as SV
+import Data.Vector.Storable qualified as SV
 import Foreign
-import qualified GHC.Base as GHC
+import GHC.Base qualified as GHC
 import GHC.Exts (noinline)
 import GHC.Stack (HasCallStack)
-import Linear.Witness.Token
+import Linear.Token.Linearly
 import Prelude.Linear
-import qualified Unsafe.Linear as Unsafe
-import qualified Prelude as P
+import Unsafe.Linear qualified as Unsafe
+import Prelude qualified as P
 
 {- | Allocate a constant array given a size and an initial value
 The size must be non-negative, otherwise this errors.
@@ -71,7 +71,7 @@ fromVectorL =
             (# !_, () #) -> SArray sz ptr
     )
 
-freeze :: (Storable a) => SArray a %1 -> Ur (SV.Vector a)
+freeze :: SArray a %1 -> Ur (SV.Vector a)
 {-# NOINLINE freeze #-}
 freeze = noinline $ Unsafe.toLinear \(SArray l ptr) ->
   case GHC.runRW# (GHC.unIO (newForeignPtr finalizerFree ptr)) of

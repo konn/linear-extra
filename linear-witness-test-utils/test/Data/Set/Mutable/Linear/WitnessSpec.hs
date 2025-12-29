@@ -10,8 +10,8 @@ import qualified Data.Set as Set
 import qualified Data.Set.Mutable.Linear as LSet
 import qualified Data.Set.Mutable.Linear.Witness as LSet
 import Data.Unrestricted.Linear (Ur (..), unur)
-import Linear.Witness.Token (besides, linearly)
-import Linear.Witness.Token.TestUtils
+import Linear.Token.Linearly (besides, linearly)
+import Linear.Token.Linearly.TestUtils
 import Prelude.Linear ((&))
 import qualified Test.Falsify.Generator as F
 import Test.Falsify.Predicate ((.$))

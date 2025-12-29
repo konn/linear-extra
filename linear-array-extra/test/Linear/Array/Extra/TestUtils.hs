@@ -7,7 +7,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Linear.Array.Extra.TestUtils (
-  module Linear.Witness.Token.TestUtils,
+  module Linear.Token.Linearly.TestUtils,
 ) where
 
 import qualified Data.Array.Mutable.Linear.Primitive as LPA
@@ -15,7 +15,7 @@ import qualified Data.Array.Mutable.Linear.Unboxed as LUA
 import Data.Primitive (Prim)
 import qualified Data.Vector.Mutable.Linear.Unboxed as LUV
 import qualified Data.Vector.Unboxed as U
-import Linear.Witness.Token.TestUtils
+import Linear.Token.Linearly.TestUtils
 import Prelude.Linear (Ur (..))
 import qualified Prelude.Linear as PL
 import qualified Test.Falsify.Generator as F

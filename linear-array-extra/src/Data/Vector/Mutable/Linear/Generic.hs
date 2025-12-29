@@ -41,17 +41,17 @@ module Data.Vector.Mutable.Linear.Generic (
   toList,
 ) where
 
-import qualified Control.Functor.Linear as C
+import Control.Functor.Linear qualified as C
 import Control.Monad (guard)
 import Data.Array.Mutable.Linear.Class (Array)
-import qualified Data.Array.Mutable.Linear.Class as Array
-import qualified Data.Bifunctor.Linear as BiL
-import qualified Data.Unrestricted.Linear as Ur
+import Data.Array.Mutable.Linear.Class qualified as Array
+import Data.Bifunctor.Linear qualified as BiL
+import Data.Unrestricted.Linear qualified as Ur
 import GHC.Stack (HasCallStack)
-import Linear.Witness.Token
-import Linear.Witness.Token.Unsafe (HasLinearWitness)
+import Linear.Token.Linearly
+import Linear.Token.Linearly.Unsafe (HasLinearWitness)
 import Prelude.Linear hiding (filter, mapMaybe)
-import qualified Prelude as P
+import Prelude qualified as P
 
 data Vector arr a where
   Vec :: {-# UNPACK #-} !Int -> arr a %1 -> Vector arr a
@@ -64,13 +64,13 @@ instance (Array arr a) => Dupable (Vector arr a) where
   dup2 (Vec n arr) =
     BiL.bimap (Vec n) (Vec n) (dup2 arr)
 
-empty :: (Array.Array arr a) => (Vector arr a %1 -> Ur b) %1 -> Ur b
+empty :: (Movable b, Array.Array arr a) => (Vector arr a %1 -> b) %1 -> b
 empty f = Array.unsafeAlloc 0 (f . Vec 0)
 
 emptyL :: (Array.Array arr a) => Linearly %1 -> Vector arr a
 emptyL = Vec 0 . Array.unsafeAllocL 0
 
-constant :: (HasCallStack, Array arr a) => Int -> a -> (Vector arr a %1 -> Ur b) %1 -> Ur b
+constant :: (HasCallStack, Movable b, Array arr a) => Int -> a -> (Vector arr a %1 -> b) %1 -> b
 constant n a f
   | n < 0 = error ("constant: must be non-negative but got: " <> show n) f
   | otherwise = Array.unsafeAlloc n (f . Vec n . Array.fill a)
@@ -81,7 +81,7 @@ constantL n a
   | otherwise = Vec n . Array.fill a . Array.unsafeAllocL n
 
 -- | Allocator from a list
-fromList :: (Array arr a) => [a] -> (Vector arr a %1 -> Ur b) %1 -> Ur b
+fromList :: (Movable b, Array arr a) => [a] -> (Vector arr a %1 -> b) %1 -> b
 fromList xs f = Array.fromList xs (f . fromArray)
 
 -- | Allocator from a list
